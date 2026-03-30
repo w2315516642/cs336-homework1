@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import os
-import resource
+# TODO: 这个是Linux专用的库，估计得放在autodl上面跑了
+import resource 
 import sys
 
 import psutil
