@@ -34,7 +34,7 @@ class Tokenizer(ABC):
             splited_chunk = [text]
             special_tokens_seq = []
 
-        sp_token_cnt = 0
+        i = 0
         for seg in splited_chunk:
             pre_token_iter = re.finditer(PAT, seg)
             for pre_token in pre_token_iter:
@@ -45,9 +45,9 @@ class Tokenizer(ABC):
                     pre_tokens_to_token[pre_token] = pre_token
                 pre_tokens_seq.append(pre_token)
             # 每段分割完后需要把特殊分割符给补上
-            if sp_token_cnt < len(special_tokens_seq):
-                pre_tokens_seq.append(special_tokens_seq[sp_token_cnt])
-            sp_token_cnt += 1
+            if i < len(special_tokens_seq):
+                pre_tokens_seq.append(special_tokens_seq[i])
+            i += 1
 
         return pre_tokens_to_token, pre_tokens_seq, special_tokens_seq
 
@@ -472,11 +472,16 @@ class BPETokenizer(Tokenizer):
         token_id_list = []
         for pre_token in pre_tokens_seq:
             # 特殊token整个处理
-            if special_tokens_seq and pre_token == special_tokens_seq[pos]:
+            if (
+                special_tokens_seq 
+                and pos < len(special_tokens_seq)
+                and pre_token == special_tokens_seq[pos]
+            ):
                 # str形式转换成bytes形式
                 pre_token = bytes(pre_token.encode("utf-8"))
                 token_id = self.vocab_to_index[pre_token]
                 token_id_list.append(token_id)
+                pos += 1
                 continue
             # 正常token要根据合并情况处理
             tokens = pre_tokens_to_token[pre_token]
@@ -558,21 +563,26 @@ class BPETokenizer(Tokenizer):
 
 
 if __name__ == "__main__":
+    
+    special_tokens = ["<|endoftext|>", "<|endoftext|><|endoftext|>"]
 
-    input_path = Path(__file__).parent.parent / "data" / "TinyStoriesV2-GPT4-valid.txt"
-    trainer = BPETokenizerTrainer(
-        file_path = input_path, 
-        vocab_size=10000, 
-        special_tokens=["<|endoftext|>"]
-    )
-    trainer.train_bpe()
-    trainer.save()
+    # input_path = Path(__file__).parent.parent / "data" / "TinyStoriesV2-GPT4-valid.txt"
+    # trainer = BPETokenizerTrainer(
+    #     file_path = input_path, 
+    #     vocab_size=10000, 
+    #     special_tokens=special_tokens
+    # )
+    # trainer.train_bpe()
+    # trainer.save()
 
     # bpe = BPETokenizer(trainer.vocab, trainer.merges, trainer.special_tokens)
     
-    bpe = BPETokenizer.from_files(str(Path(__file__).parent / "tokenizer_params.bin"))
+    bpe = BPETokenizer.from_files(
+        str(Path(__file__).parent / "tokenizer_params.bin"), 
+        special_tokens
+    )
 
-    origin_text = "Hello, world!"
+    origin_text = "Hello, world! <|endoftext|><|endoftext|> hello <|endoftext|> world"
     token_id_list = bpe.encode(origin_text)
     print(token_id_list)
 
