@@ -497,7 +497,7 @@ class BPETokenizer(Tokenizer):
         没有则在pre-token后舍弃最后一个pre-token，避免产生截断
         """
 
-        chunk_size = 64
+        chunk_size = 4096 * 16
 
         file_pos = 0
         while True:
