@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import BinaryIO, Dict, Iterable, Optional, Self, Tuple, List, final
+from typing import IO, BinaryIO, Dict, Iterable, Optional, Self, Tuple, List, final
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 import regex as re
@@ -490,21 +490,21 @@ class BPETokenizer(Tokenizer):
                 token_id_list.append(token_id)
         return token_id_list
 
-    def encode_iterable(self, file: BinaryIO) -> Iterable:
+    def encode_iterable(self, file: IO) -> Iterable:
         """
         需要保证分块pre-token不会截断正常pre-token和特殊token
         可以在块内检测有无特殊token，有则截断到该token处
         没有则在pre-token后舍弃最后一个pre-token，避免产生截断
         """
 
-        chunk_size = 4096 * 4
+        chunk_size = 64
 
         file_pos = 0
         while True:
             chunk = file.read(chunk_size)
 
             # 检查是否是最后一个块
-            if chunk == "":
+            if not chunk:
                 break
             
             # 如果是最后一个块，跳过截断判断
@@ -544,10 +544,21 @@ class BPETokenizer(Tokenizer):
                     chunk = original_chunk
             # 处理完chunk之后进行encode
             chunk_len = len(chunk)
-            
-            # 文件指针回到初始位置，重新移动到截断后长度的位置
+
+            # 文件指针移动到截断后长度的位置
+            # 错误示例，seek输入是字节数，不是字符数，得转换一下，或者用read
+            # file.seek(file_pos)
+            # file.read(chunk_len)
+            # a = file.tell()
+            # file_pos += chunk_len
+            # file.seek(file_pos)
+            # b = file.tell()
+            # print(a, b)
+
+            # 获取字符串截断后对应的文件指针位置
             file.seek(file_pos)
-            file_pos += chunk_len
+            file.read(chunk_len)
+            file_pos = file.tell()
             file.seek(file_pos)
 
             token_id_list = self.encode(chunk)
@@ -562,11 +573,92 @@ class BPETokenizer(Tokenizer):
         return decode_bytes.decode(encoding="utf-8", errors="ignore")
 
 
+def test_encode_iterable():
+    special_tokens = ["<|endoftext|>", "<|endoftext|><|endoftext|>"]
+    
+    bpe = BPETokenizer.from_files(
+        str(Path(__file__).parent / "tokenizer_params.bin"), 
+        special_tokens
+    )
+
+    origin_text = """
+    
+Once upon a time there was a little boy named Ben. Ben loved to explore the world around him. He saw many amazing things, like beautiful vases that were on display in a store. One day, Ben was walking through the store when he came across a very special vase. When Ben saw it he was amazed!
+He said, “Wow, that is a really amazing vase! Can I buy it?”
+The shopkeeper smiled and said, “Of course you can. You can take it home and show all your friends how amazing it is!”
+So Ben took the vase home and he was so proud of it! He called his friends over and showed them the amazing vase. All his friends thought the vase was beautiful and couldn't believe how lucky Ben was.
+And that's how Ben found an amazing vase in the store!
+<|endoftext|>
+Once upon a time, there was a reliable otter named Ollie. He lived in a river with his family. They all loved to play and swim together.
+One day, Ollie's mom said, "Ollie, hurry and get some fish for dinner!" Ollie swam fast to catch fish. He saw his friend, the duck. "Hi, Ollie!" said the duck. "Hi, duck!" said Ollie. "I need to hurry and catch fish for my family."
+While Ollie was catching fish, he found a big shiny stone. He thought, "This is not a fish, but it is so pretty!" Ollie took the shiny stone home to show his family. They all looked at the shiny stone and smiled. The shiny stone made everyone happy, and they forgot about the fish for dinner.
+<|endoftext|>
+One day, a little boy named Tim went to the park. He saw a big tiger. The tiger was not mean, but very easy to play with. Tim and the tiger played all day. They had lots of fun.
+Then, something unexpected happened. The tiger started to shake. Tim was scared. He did not know what was going on. But then, the tiger turned into a nice dog. Tim was very surprised.
+Tim and the dog played together now. They were very happy. The dog was easy to play with too. At the end of the day, Tim went home with his new friend.
+<|endoftext|>
+
+Once upon a time there was a friendly little boy called Bob. Bob loved to pick flowers and look for birds. One day he decided to go outside with his friends to pick some more flowers.
+He suddenly noticed something weird on the ground. It was a big, green thumb! It was so big, Bob had never seen one before. Bob curiously leaned in to take a better look. He told his friends: "look everyone, I picked up this big thumb! What do we do with it?"
+His friends were very excited. They told him to pick it up and take it home to show his family. So Bob carefully picked up the friendly thumb and carried it back home. When he arrived, Bob happily showed the thumb to his family. His dad was amazed and hugged Bob to show his appreciation.
+From that day on Bob always kept the big, friendly thumb with him as a reminder that special things can be found anywhere.
+<|endoftext|>
+Once upon a time, in a small house, there lived a little girl named Lucy. Lucy loved the color orange. She had an orange dress, an orange ball, and even an orange cat. One day, Lucy met a new friend. This friend was not like other friends. It was a spirit. The spirit was very nice and liked to play with Lucy.
+One day, Lucy and the spirit were playing with her orange ball. They were having so much fun. Then, Lucy's mom called her for dinner. Lucy said to the spirit, "I have to go eat now. Will you play with me later?" The spirit nodded and smiled.
+At dinner, Lucy told her mom about the spirit. But her mom did not believe her. She said, "Spirits are not real, Lucy. You have a big imagination." Lucy felt sad that her mom did not believe her. After dinner, she went back to play with the spirit. They played with the orange ball and had lots of fun. Lucy knew that even if others ignore her friend, the spirit was real and they could play together.
+<|endoftext|>
+
+    """
+    token_id_list = bpe.encode(origin_text)
+    # print(token_id_list)
+
+    decode_text = bpe.decode(token_id_list)
+    # print("origin text: ", origin_text)
+    # print("decode text: ", decode_text)
+    
+    test_path = Path(__file__).parent / "text.txt"
+    with open(test_path, 'w') as file:
+        file.write(origin_text)
+    
+    ids = []
+    with open(test_path, 'r') as file:
+        token_iter = bpe.encode_iterable(file)
+        for token_id in token_iter:
+            ids.append(token_id)
+    decode_itera = bpe.decode(ids)
+
+    # print("decode text: ", decode_itera)
+    from rich.console import Console
+    from rich.table import Table
+    console = Console()
+    table = Table(title="BPE Tokenizer 差异对比")
+    
+    table.add_column("位置", justify="right")
+    table.add_column("预期 (Expected)", style="green")
+    table.add_column("实际 (Actual)", style="red")
+    table.add_column("差异说明", style="bold yellow")
+    max_len = max(len(decode_itera), len(origin_text))
+    for i in range(max_len):
+        exp = origin_text[i] if i < len(origin_text) else "-"
+        act = decode_itera[i] if i < len(decode_itera) else "-"
+        
+        # 转换成字符看
+        exp_char = f"'{exp}" if exp != "-" else "-"
+        act_char = f"'{act}" if act != "-" else "-"
+        
+        if exp != act:
+            table.add_row(str(i), exp_char, act_char, "❌ 不匹配" if act != "-" and exp != "-" else "➕ 多出")
+            # 如果只想看报错点附近，可以在这里加个计数器，只打前后 5 行
+    # console.print(table)
+    # print(decode_itera)
+    assert decode_itera == origin_text
+
+
 if __name__ == "__main__":
     
     special_tokens = ["<|endoftext|>", "<|endoftext|><|endoftext|>"]
-
-    # input_path = Path(__file__).parent.parent / "data" / "TinyStoriesV2-GPT4-valid.txt"
+    input_path = Path(__file__).parent.parent / "data" / "TinyStoriesV2-GPT4-valid.txt"
+    
     # trainer = BPETokenizerTrainer(
     #     file_path = input_path, 
     #     vocab_size=10000, 
@@ -576,16 +668,31 @@ if __name__ == "__main__":
     # trainer.save()
 
     # bpe = BPETokenizer(trainer.vocab, trainer.merges, trainer.special_tokens)
-    
     bpe = BPETokenizer.from_files(
         str(Path(__file__).parent / "tokenizer_params.bin"), 
         special_tokens
     )
 
-    origin_text = "Hello, world! <|endoftext|><|endoftext|> hello <|endoftext|> world"
+    origin_text = "Hello world! <|endoftext|><|endoftext|> Hello <|endoftext|> world! <|endoftext|>"
+
     token_id_list = bpe.encode(origin_text)
-    print(token_id_list)
+    # print(token_id_list)
 
     decode_text = bpe.decode(token_id_list)
+    # print("origin text: ", origin_text)
+    # print("decode text: ", decode_text)
+    
+    test_path = Path(__file__).parent / "text.txt"
+    with open(test_path, 'w') as file:
+        file.write(origin_text)
+    
+    ids = []
+    with open(test_path, 'r') as file:
+        token_iter = bpe.encode_iterable(file)
+        for token_id in token_iter:
+            ids.append(token_id)
+    decode_itera = bpe.decode(ids)
+
     print("origin text: ", origin_text)
     print("decode text: ", decode_text)
+    print("decode iter: ", decode_itera)
