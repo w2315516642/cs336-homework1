@@ -300,7 +300,7 @@ def run_transformer_lm(
         num_heads (int): Number of heads to use in multi-headed attention. `d_model` must be
             evenly divisible by `num_heads`.
         d_ff (int): Dimensionality of the feed-forward inner layer (section 3.3).
-        rope_theta (float): The RoPE $\Theta$ parameter.
+        rope_theta (float): The RoPE Theta parameter.
         weights (dict[str, Tensor]):
             State dict of our reference implementation. {num_layers} refers to an
             integer between `0` and `num_layers - 1` (the layer index).
@@ -539,6 +539,8 @@ def run_load_checkpoint(
     raise NotImplementedError
 
 
+from cs336_basics.tokenizer import BPETokenizer
+
 def get_tokenizer(
     vocab: dict[int, bytes],
     merges: list[tuple[bytes, bytes]],
@@ -559,15 +561,10 @@ def get_tokenizer(
     Returns:
         A BPE tokenizer that uses the provided vocab, merges, and special tokens.
     """
-    return BPETokenizer(vocab, merges, special_tokens=special_tokens)
+    return BPETokenizer(vocab, merges, special_tokens)
 
-from pathlib import Path
-import sys
 
-# HOMEWORK_PATH = Path(__file__).parent.parent / "cs336_basics"
-# sys.path.append(HOMEWORK_PATH)
-
-from cs336_basics.tokenizer import BPETokenizer
+from cs336_basics.tokenizer import BPETokenizerTrainer as Trainer
 
 def run_train_bpe(
     input_path: str | os.PathLike,
@@ -596,7 +593,7 @@ def run_train_bpe(
                 representing that <token1> was merged with <token2>.
                 Merges are ordered by order of creation.
     """
-    # raise NotImplementedError
 
-    bpe = BPETokenizer(input_path, vocab_size, special_tokens)
+    bpe = Trainer(input_path, vocab_size, special_tokens)
+    bpe.train_bpe()
     return bpe.vocab, bpe.merges

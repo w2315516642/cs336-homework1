@@ -1,11 +1,9 @@
-import encodings
 from pathlib import Path
-from typing import BinaryIO, Dict, Iterable, Optional, Tuple, List, final
+from typing import BinaryIO, Dict, Iterable, Optional, Self, Tuple, List, final
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from torch import special
 from tqdm import tqdm
 import regex as re
+import pickle, struct
 
 from multiprocessing import Pool
 from collections import Counter
@@ -17,100 +15,6 @@ from .utils import find_chunk_boundaries, print_max_n
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
 class Tokenizer(ABC):
-
-    @staticmethod
-    def count_pre_tokenize(
-        file_path: str,
-        special_tokens: List[str] | str,
-        num_processor: int = 5,
-    ) -> Dict[int, Tuple[Tuple[bytes], int]]:
-
-        if isinstance(special_tokens, List):
-            concat_special_tokens = "|".join(special_tokens)
-        else:
-            concat_special_tokens = special_tokens
-
-        boundaries = find_chunk_boundaries(file_path, num_processor, b"<|endoftext|>")
-
-        # 设置每个cpu要处理的文件边界
-        tasks = [(boundaries[i], boundaries[i + 1]) for i in range(len(boundaries) - 1)]
-        
-        # 固定变量只剩下边界
-        worker = partial(
-            Tokenizer.process_chunk, 
-            file_path, 
-            concat_special_tokens
-        )
-
-        global_counter = Counter()
-        try:
-            with Pool(processes=num_processor) as pool:
-                for counter in tqdm(
-                    pool.imap_unordered(worker, tasks),
-                    total=len(tasks),
-                    desc="Spliting corpus",
-                ):
-                    global_counter.update(counter)
-        except KeyboardInterrupt:
-            print("正在清理进程池。。。")
-            pool.terminate()
-            pool.join()
-            print("清理完毕")
-        
-        pre_tokens = {}
-        for i, (pre_token, count) in enumerate(global_counter.items()):
-            pre_tokens[i] = [pre_token, count]
-        
-        return pre_tokens
-
-        # # 单CPU代码
-        # for idx_bound in tqdm(range(len(boundaries) - 1), desc="Spliting corpus"):
-        #     start, end = boundaries[idx_bound], boundaries[idx_bound + 1]
-        #     file.seek(start)
-        #     chunk = file.read(end - start).decode(encoding="utf-8", errors="ignore")
-
-        #     # 对文本进行预分词
-        #     splited_chunk = re.split(concat_special_tokens, chunk)
-
-        #     for seg in splited_chunk:
-        #         pre_token_iter = re.finditer(PAT, seg)
-        #         for pre_token in pre_token_iter:
-        #             # 将字符串形式转变为tuple(bytes)形式，后面合并要用
-        #             pre_token = pre_token.group().encode("utf-8")
-        #             pre_token = tuple(bytes([b]) for b in pre_token)
-        #             # pre_token = tuple(pre_token)
-        #             # 单词计数（tokenize的bytes，出现次数）
-        #             if pre_token not in pre_tokens_to_idx.keys():
-        #                 pre_tokens_to_idx[pre_token] = idx
-        #                 pre_tokens[idx] = [pre_token, 1]
-        #                 idx += 1
-        #             else:
-        #                 pre_tokens[pre_tokens_to_idx[pre_token]][-1] += 1
-        # return pre_tokens
-
-    @staticmethod
-    def process_chunk(
-        file_path: str,
-        concat_special_tokens: str,
-        boundary_pair: Tuple[int, int],
-    ) -> Counter:
-        start, end = boundary_pair
-        local_counter = Counter()
-
-        with open(file_path, "rb") as f:
-            # 切块并修改换行符，测试用例里面是Linux的\n，
-            # 但windows默认用的是\r\n
-            f.seek(start)
-            chunk = f.read(end - start).decode(encoding="utf-8", errors="ignore")
-            chunk = chunk.replace("\r\n", "\n") 
-            # 对文本进行预分词
-            splited_chunk = re.split(concat_special_tokens, chunk)
-            for seg in splited_chunk:
-                pre_token_iter = Tokenizer.pre_tokenize_itera(seg)
-                for pre_token in pre_token_iter:
-                    local_counter[pre_token] += 1
-
-        return local_counter
 
     @staticmethod
     def pre_tokenize(
@@ -176,7 +80,7 @@ class Tokenizer(ABC):
 #     vocab: Dict[int, bytes] = None
 #     merges: Dict[Tuple[int, int], int] = None
 
-class BPETokenizerTrainer(Tokenizer):
+class BPETokenizerTrainer:
     def __init__(
         self, 
         file_path: str, 
@@ -189,50 +93,17 @@ class BPETokenizerTrainer(Tokenizer):
         self.special_tokens = special_tokens if special_tokens else []
         self.num_processor = num_processor
 
-
-class BPETokenizer(Tokenizer):
-    def __init__(
-        self, 
-        vocab: Dict[int, bytes] = {},
-        merges: List[Tuple[bytes, bytes]] = [],
-        special_tokens: List[str] | str = [],
-        corpus_path: Optional[str] = None,
-        target_vocab_size: int = 256,
-        num_processor: int = 6,
-    ) -> None:
-        super().__init__()
-
-        assert target_vocab_size >= 256, (
-            "The minimum target vocab size is 256, " 
-            f"but get {target_vocab_size}"
-        )
-
-        # 加入默认的特殊tokens
-        if isinstance(special_tokens, List):
-            if "<|endoftext|>" not in special_tokens:
-                special_tokens.append("<|endoftext|>")
-            special_tokens = sorted(special_tokens, key=len, reverse=True)
-        self.special_tokens = special_tokens
-        self.num_processor = num_processor
-        
-        # 初始化词汇表和合并列表
-        self.vocab = vocab
-        self.vocab_to_index = {v: k for k, v in self.vocab.items()}
-        self.merges = merges
-
         # 初始化BPE训练过程中需要的变量
         self.pre_tokens = {}    # 对语料库pre-token后的计数结果
         self.bp_freq = {}       # 字节对频率统计结果
 
-        if corpus_path is not None:
-            self.train_bpe(corpus_path, target_vocab_size)
+        self.vocab = {}
+        self.merges = []
 
-    def train_bpe(
-        self,
-        input_path: str, 
-        target_vocab_size: int, 
-    ) -> None:
-    
+    def train_bpe(self) -> None:
+
+        input_path = self.file_path
+        target_vocab_size = self.vocab_size
         special_tokens = self.special_tokens
         # 根据特殊tokens初始化词汇表
         len_st = len(special_tokens)
@@ -355,6 +226,192 @@ class BPETokenizer(Tokenizer):
                         self.bp_freq.pop(pair)
                 pos += 1
             self.pre_tokens[have_pair_idx][0] = pre_token
+
+    @staticmethod
+    def count_pre_tokenize(
+        file_path: str,
+        special_tokens: List[str] | str,
+        num_processor: int = 5,
+    ) -> Dict[int, Tuple[Tuple[bytes], int]]:
+
+        if isinstance(special_tokens, List):
+            concat_special_tokens = "|".join(special_tokens)
+        else:
+            concat_special_tokens = special_tokens
+
+        boundaries = find_chunk_boundaries(file_path, num_processor, b"<|endoftext|>")
+
+        # 设置每个cpu要处理的文件边界
+        tasks = [(boundaries[i], boundaries[i + 1]) for i in range(len(boundaries) - 1)]
+        
+        # 固定变量只剩下边界
+        worker = partial(
+            BPETokenizerTrainer.process_chunk, 
+            file_path, 
+            concat_special_tokens
+        )
+
+        global_counter = Counter()
+        try:
+            with Pool(processes=num_processor) as pool:
+                for counter in tqdm(
+                    pool.imap_unordered(worker, tasks),
+                    total=len(tasks),
+                    desc="Spliting corpus",
+                ):
+                    global_counter.update(counter)
+        except KeyboardInterrupt:
+            print("正在清理进程池。。。")
+            pool.terminate()
+            pool.join()
+            print("清理完毕")
+        
+        pre_tokens = {}
+        for i, (pre_token, count) in enumerate(global_counter.items()):
+            pre_tokens[i] = [pre_token, count]
+        
+        return pre_tokens
+
+    @staticmethod
+    def process_chunk(
+        file_path: str,
+        concat_special_tokens: str,
+        boundary_pair: Tuple[int, int],
+    ) -> Counter:
+        start, end = boundary_pair
+        local_counter = Counter()
+
+        with open(file_path, "rb") as f:
+            # 切块并修改换行符，测试用例里面是Linux的\n，
+            # 但windows默认用的是\r\n
+            f.seek(start)
+            chunk = f.read(end - start).decode(encoding="utf-8", errors="ignore")
+            chunk = chunk.replace("\r\n", "\n") 
+            # 对文本进行预分词
+            splited_chunk = re.split(concat_special_tokens, chunk)
+            for seg in splited_chunk:
+                pre_token_iter = Tokenizer.pre_tokenize_itera(seg)
+                for pre_token in pre_token_iter:
+                    local_counter[pre_token] += 1
+
+        return local_counter
+
+    def save(self, save_path: str | None = None) -> None:
+        if not save_path:
+            save_path = str(Path(__file__).parent / "tokenizer_params.bin")
+        if not save_path.lower().endswith(".bin"):
+            save_path += ".bin"
+
+        # # 直接二进制存
+        # with open(save_path, "wb") as f:
+        #     save_data = {
+        #         "vocab": self.vocab,
+        #         "merges": self.merges,
+        #     }
+        #     pickle.dump(save_data, f)
+        #     f.close()
+
+        # 自定义结构体存
+        # 每个数据所占的字节长度
+        size_to_fmt = { 1: "B", 2: "H", 4: "I", 8: "Q" }
+        id_bytes = next(b for b in [1, 2, 4, 8] if self.vocab_size <= 256 ** b)
+        fmt = size_to_fmt[id_bytes]
+        with open(save_path, "wb") as f:
+            # 保存每个id用的字节数
+            f.write(struct.pack("B", id_bytes))
+
+            ''' 
+                保存vocab，保存格式为
+                    vocab词表大小N: 4字节
+                    词表ID(key): 4 字节
+                    ID对应字节长度n: 4 字节
+                    ID对应字节: n 字节
+            '''
+            f.write(struct.pack(fmt, self.vocab_size))
+            for k, v in self.vocab.items():
+                num_bytes = len(v)
+                f.write(struct.pack(2 * fmt, k, num_bytes))
+                f.write(v)
+
+            ''' 
+                保存merges
+                目前merges存的是字节对，需要先转换成ID对再存，读取的时候再转换回来
+                merges保存格式为
+                    merges列表大小N: 4 字节
+                    merges参数: ID1 + ID2: (4 + 4) * N 字节
+                总长度为 8N + 4 字节
+            '''
+            # 保存列表长度
+            size_merges = len(self.merges)
+            f.write(struct.pack(fmt, size_merges))
+            # 字节对转化成ID对
+            for b1, b2 in self.merges:
+                id1, id2 = self.vocab_to_index[b1], self.vocab_to_index[b2]
+                f.write(struct.pack(2 * fmt, id1, id2))
+            
+            f.close()
+
+
+class BPETokenizer(Tokenizer):
+    def __init__(
+        self, 
+        vocab: Dict[int, bytes] = {},
+        merges: List[Tuple[bytes, bytes]] = [],
+        special_tokens: List[str] | str = [],
+    ) -> None:
+        super().__init__()
+
+        # 加入默认的特殊tokens
+        if isinstance(special_tokens, List):
+            if "<|endoftext|>" not in special_tokens:
+                special_tokens.append("<|endoftext|>")
+            special_tokens = sorted(special_tokens, key=len, reverse=True)
+        self.special_tokens = special_tokens
+        
+        # 初始化词汇表和合并列表
+        self.vocab = vocab
+        self.vocab_to_index = {v: k for k, v in self.vocab.items()}
+        self.merges = merges
+
+    @classmethod
+    def from_files(
+        cls, 
+        params_path: str, 
+        special_tokens: List[str] | None = None
+    ) -> Self:
+
+        size_to_fmt = { 1: "B", 2: "H", 4: "I", 8: "Q" }
+        with open(params_path, "rb") as f:
+            size = f.read(1)[0]
+            fmt = size_to_fmt[size]
+
+            # 读取 vocab
+            # 不加[0]读出来就是一个(ans,)形式的列表
+            vocab_size = struct.unpack(fmt, f.read(size))[0]
+            vocab = {}
+            for _ in range(vocab_size):
+                token_id, token_size = struct.unpack(2 * fmt, f.read(2 * size))  # 数字形式
+                token = f.read(token_size)  # 字节形式
+                assert token_id not in vocab, f"Token id {token_id} appears repeatedly in vocab."
+                vocab[token_id] = token
+
+            # 读取 merges
+            merges_size = struct.unpack(fmt, f.read(size))[0]
+            merges = []
+            for _ in range(merges_size):
+                id1, id2 = struct.unpack(2 * fmt, f.read(2 * size))
+                token1, token2 = vocab[id1], vocab[id2]
+                merges.append((token1, token2))
+
+            f.close()
+
+        # 加入默认的特殊tokens
+        if special_tokens and isinstance(special_tokens, List):
+            if "<|endoftext|>" not in special_tokens:
+                special_tokens.append("<|endoftext|>")
+            special_tokens = sorted(special_tokens, key=len, reverse=True)
+
+        return cls(vocab, merges, special_tokens)
 
     def merge(
         self,
@@ -502,14 +559,17 @@ class BPETokenizer(Tokenizer):
 if __name__ == "__main__":
 
     input_path = Path(__file__).parent.parent / "data" / "TinyStoriesV2-GPT4-valid.txt"
-    bpe = BPETokenizer(
-        corpus_path = input_path, 
-        target_vocab_size=500, 
+    trainer = BPETokenizerTrainer(
+        file_path = input_path, 
+        vocab_size=10000, 
         special_tokens=["<|endoftext|>"]
     )
-    # vocab, merges = train_bpe_func(input_path, 10000, ["<|endoftext|>"])
-    # print(f"vocab: {bpe.vocab}")
-    # # print(f"merges: {bpe.merges}")
+    trainer.train_bpe()
+    trainer.save()
+
+    # bpe = BPETokenizer(trainer.vocab, trainer.merges, trainer.special_tokens)
+    
+    bpe = BPETokenizer.from_files(str(Path(__file__).parent / "tokenizer_params.bin"))
 
     origin_text = "Hello, world!"
     token_id_list = bpe.encode(origin_text)
