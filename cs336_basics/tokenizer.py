@@ -238,8 +238,9 @@ class BPETokenizerTrainer:
             concat_special_tokens = "|".join(special_tokens)
         else:
             concat_special_tokens = special_tokens
-
-        boundaries = find_chunk_boundaries(file_path, num_processor, b"<|endoftext|>")
+    
+        num_chunks = num_processor * 10
+        boundaries = find_chunk_boundaries(file_path, num_chunks, b"<|endoftext|>")
 
         # 设置每个cpu要处理的文件边界
         tasks = [(boundaries[i], boundaries[i + 1]) for i in range(len(boundaries) - 1)]
