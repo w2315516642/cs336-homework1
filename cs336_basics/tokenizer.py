@@ -495,7 +495,7 @@ class BPETokenizer(Tokenizer):
 
         file_pos = 0
         while True:
-            chunk = file.read(chunk_size).decode(encoding="utf-8", errors="ignore")
+            chunk = file.read(chunk_size)
 
             # 检查是否是最后一个块
             if chunk == "":
