@@ -539,8 +539,9 @@ class BPETokenizer(Tokenizer):
                     if pre_tokens:
                         last_token_len = len(pre_tokens[-1])
                         chunk = chunk[:-last_token_len]
-                
-                if chunk == "":
+                # 如果截断后是空的,则原始chunk可能是一个长token,避免死循环
+                # 需要把chunk_size设置得大一点避免这种情况
+                if not chunk:
                     chunk = original_chunk
             # 处理完chunk之后进行encode
             chunk_len = len(chunk)
