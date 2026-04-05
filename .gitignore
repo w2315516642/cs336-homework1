@@ -161,8 +161,10 @@ cython_debug/
 
 .ruff_cache/
 *.zip
-
-*.txt
 *.gz
+
+*.prof
+*.txt
+*.bin
 
 data/
