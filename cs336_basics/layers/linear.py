@@ -5,14 +5,13 @@ class Linear(nn.Module):
     def __init__(self, in_features, out_features, device=None, dtype=None) -> None:
         super().__init__()
 
-        self.device: torch.device = device if device else "cpu"
-        self.dtype: torch.dtype = dtype if dtype else torch.float32
+        device = device if device else "cpu"
+        dtype = dtype if dtype else torch.float32
+        kwargs = {"device": device, "dtype": dtype}
 
-        # 参数初始化
-        self.weight = nn.Parameter(torch.rand(
-                size=(in_features, out_features), 
-                device=self.device, 
-                dtype=self.dtype
+        # 权重初始化
+        self.weight = nn.Parameter(torch.empty(
+                size=(in_features, out_features), **kwargs
             ))
         # 参数截断
         sigma = torch.sqrt(torch.tensor(2.0 / (in_features + out_features)))
@@ -21,6 +20,7 @@ class Linear(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: [batch, ]
         out = x @ self.weight
         return out
         
