@@ -15,6 +15,7 @@ def train_bpe(
     file_path: str, 
     vocab_size: int, 
     special_tokens: List[str] = None,
+    num_processor: int = 6,
     save_path: str = "params.bin"
 ) -> None:
     special_tokens = check_special_tokens(special_tokens)
@@ -22,7 +23,8 @@ def train_bpe(
     trainer = Trainer(
         file_path=file_path, 
         vocab_size=vocab_size, 
-        special_tokens=special_tokens)
+        special_tokens=special_tokens,
+        num_processor=num_processor)
 
     trainer.train_bpe()
     trainer.save(save_path)
@@ -45,21 +47,38 @@ def valid_bpe(
     print(token_ids[:100])
     
 
-
 from pathlib import Path
 def train_TinyStoriesV2_corpus():
-    file_path = Path(__file__).parent.parent / "data" / "TinyStoriesV2-GPT4-train.txt"
-    vocab_size = 10000
-    save_path = "TinyStoriesV2_params.bin"
+    parser = get_parser()
+    args = parser.parse_args()
 
-    train_bpe(file_path, vocab_size, [], save_path)
+    file_path = Path(__file__).parent.parent / "data" / args.train_file
+    vocab_size = args.vocab_size
+    save_path = args.save_name
+    print(file_path, vocab_size, save_path)
+    train_bpe(file_path, vocab_size, ['<|endoftext|>'], args.num_processor, save_path)
     valid_TinyStoriesV2_corpus()
 
 
 def valid_TinyStoriesV2_corpus():
-    params_path = "TinyStoriesV2_params.bin"
-    file_path = Path(__file__).parent.parent / "data" / "TinyStoriesV2-GPT4-valid.txt"
+    parser = get_parser()
+    args = parser.parse_args()
+
+    params_path = args.save_name
+    file_path = Path(__file__).parent.parent / "data" / args.valid_name
     valid_bpe(params_path, file_path)
+
+
+import argparse
+def get_parser():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-nc', '--num_processor', type=int, help='使用cpu的数量', default=6)
+    parser.add_argument('-vs', '--vocab_size', type=int, help='词汇表大小', default=10000)
+    parser.add_argument('-tf', '--train_file', type=str, help='训练文件名字', default="TinyStoriesV2-GPT4-train.txt")
+    parser.add_argument('-vf', '--valid_file', type=str, help='验证文件名字', default="TinyStoriesV2-GPT4-valid.txt")
+    parser.add_argument('-sn', '--save_name', type=str, help='保存文件名字', default="TinyStoriesV2_params.bin")
+    return parser
 
 
 if __name__ == "__main__":
