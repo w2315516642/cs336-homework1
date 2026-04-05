@@ -660,40 +660,40 @@ if __name__ == "__main__":
     special_tokens = ["<|endoftext|>", "<|endoftext|><|endoftext|>"]
     input_path = Path(__file__).parent.parent / "data" / "TinyStoriesV2-GPT4-valid.txt"
     
-    # trainer = BPETokenizerTrainer(
-    #     file_path = input_path, 
-    #     vocab_size=10000, 
-    #     special_tokens=special_tokens
-    # )
-    # trainer.train_bpe()
-    # trainer.save()
-
-    # bpe = BPETokenizer(trainer.vocab, trainer.merges, trainer.special_tokens)
-    bpe = BPETokenizer.from_files(
-        str(Path(__file__).parent / "tokenizer_params.bin"), 
-        special_tokens
+    trainer = BPETokenizerTrainer(
+        file_path = input_path, 
+        vocab_size=10000, 
+        special_tokens=special_tokens
     )
+    trainer.train_bpe()
+    trainer.save()
 
-    origin_text = "Hello world! <|endoftext|><|endoftext|> Hello <|endoftext|> world! <|endoftext|>"
+    # # bpe = BPETokenizer(trainer.vocab, trainer.merges, trainer.special_tokens)
+    # bpe = BPETokenizer.from_files(
+    #     str(Path(__file__).parent / "tokenizer_params.bin"), 
+    #     special_tokens
+    # )
 
-    token_id_list = bpe.encode(origin_text)
-    # print(token_id_list)
+    # origin_text = "Hello world! <|endoftext|><|endoftext|> Hello <|endoftext|> world! <|endoftext|>"
 
-    decode_text = bpe.decode(token_id_list)
+    # token_id_list = bpe.encode(origin_text)
+    # # print(token_id_list)
+
+    # decode_text = bpe.decode(token_id_list)
+    # # print("origin text: ", origin_text)
+    # # print("decode text: ", decode_text)
+    
+    # test_path = Path(__file__).parent / "text.txt"
+    # with open(test_path, 'w') as file:
+    #     file.write(origin_text)
+    
+    # ids = []
+    # with open(test_path, 'r') as file:
+    #     token_iter = bpe.encode_iterable(file)
+    #     for token_id in token_iter:
+    #         ids.append(token_id)
+    # decode_itera = bpe.decode(ids)
+
     # print("origin text: ", origin_text)
     # print("decode text: ", decode_text)
-    
-    test_path = Path(__file__).parent / "text.txt"
-    with open(test_path, 'w') as file:
-        file.write(origin_text)
-    
-    ids = []
-    with open(test_path, 'r') as file:
-        token_iter = bpe.encode_iterable(file)
-        for token_id in token_iter:
-            ids.append(token_id)
-    decode_itera = bpe.decode(ids)
-
-    print("origin text: ", origin_text)
-    print("decode text: ", decode_text)
-    print("decode iter: ", decode_itera)
+    # print("decode iter: ", decode_itera)
