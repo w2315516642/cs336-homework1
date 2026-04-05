@@ -65,7 +65,7 @@ def valid_TinyStoriesV2_corpus():
     args = parser.parse_args()
 
     params_path = args.save_name
-    file_path = Path(__file__).parent.parent / "data" / args.valid_name
+    file_path = Path(__file__).parent.parent / "data" / args.valid_file
     valid_bpe(params_path, file_path)
 
 
