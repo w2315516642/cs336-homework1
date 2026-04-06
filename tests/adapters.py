@@ -53,7 +53,10 @@ def run_embedding(
         Float[Tensor, "... d_model"]: Batch of embeddings returned by your Embedding layer.
     """
 
-    embedding = Embedding(vocab_size, d_model, weights)
+    embedding = Embedding(
+        vocab_size, 
+        d_model, 
+        weights)
     return embedding.forward(token_ids)
 
 
