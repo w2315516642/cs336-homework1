@@ -18,7 +18,7 @@ class Embedding(nn.Module):
 
         kwargs = {"device": device, "dtype": dtype}
 
-        if weights:
+        if weights is not None:
             self.weight = weights
         else:
             self.weight = nn.Parameter(
@@ -40,7 +40,9 @@ if __name__ == "__main__":
 
     assert seq_len <= num_embeddings
 
-    model = Embedding(num_embeddings, embedding_dim)
+    weights = torch.randn((num_embeddings, embedding_dim))
+
+    model = Embedding(num_embeddings, embedding_dim, weights)
 
     model_ = nn.Embedding(num_embeddings, embedding_dim)
 
