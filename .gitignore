@@ -163,7 +163,6 @@ cython_debug/
 *.zip
 *.gz
 
-*.prof
 *.txt
 *.bin
 
