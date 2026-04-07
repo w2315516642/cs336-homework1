@@ -19,7 +19,7 @@ class Embedding(nn.Module):
         kwargs = {"device": device, "dtype": dtype}
 
         if weights is not None:
-            self.weight = nn.Parameter(weights)
+            self.weight = nn.Parameter(weights, **kwargs)
         else:
             self.weight = nn.Parameter(
                 torch.empty((num_embeddings, embedding_dim), **kwargs)
