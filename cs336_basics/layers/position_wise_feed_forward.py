@@ -8,8 +8,8 @@ class SwiGLU(nn.Module):
 
         kwargs = {"device": device, "dtype": dtype}
         
-        # multipler = 64
-        # d_ff = round(d_ff / multipler) * multipler
+        multipler = 64
+        d_ff = round(d_ff / multipler) * multipler
         
         self.weight1 = nn.Parameter(torch.empty((d_ff, d_model), **kwargs))
         self.weight2 = nn.Parameter(torch.empty((d_model, d_ff), **kwargs))
