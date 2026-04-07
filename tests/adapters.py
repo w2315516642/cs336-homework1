@@ -363,7 +363,7 @@ def run_transformer_lm(
     """
     raise NotImplementedError
 
-from ..cs336_basics.layers.rmsnorm import RMSNorm
+from cs336_basics.layers.rmsnorm import RMSNorm
 def run_rmsnorm(
     d_model: int,
     eps: float,
