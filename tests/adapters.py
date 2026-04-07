@@ -92,9 +92,9 @@ def run_swiglu(
     # swiglu.w2.weight.data = w2_weight
     # swiglu.w3.weight.data = w3_weight
     model = SwiGLU(d_model, d_ff)
-    model.weight1 = nn.Parameter(w1_weight.transpose(0, 1).contiguous())
-    model.weight2 = nn.Parameter(w2_weight.transpose(0, 1).contiguous())
-    model.weight3 = nn.Parameter(w3_weight.transpose(0, 1).contiguous())
+    model.weight1 = nn.Parameter(w1_weight)
+    model.weight2 = nn.Parameter(w2_weight)
+    model.weight3 = nn.Parameter(w3_weight)
     return model(in_features)
 
 

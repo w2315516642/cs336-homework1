@@ -11,7 +11,7 @@ class SwiGLU(nn.Module):
         # multipler = 64
         # d_ff = round(d_ff / multipler) * multipler
         
-        self.weight1 = nn.Parameter(torch.empty((d_model, d_ff), **kwargs))
+        self.weight1 = nn.Parameter(torch.empty((d_ff, d_model), **kwargs))
         self.weight2 = nn.Parameter(torch.empty((d_model, d_ff), **kwargs))
         self.weight3 = nn.Parameter(torch.empty((d_ff, d_model), **kwargs))
 
@@ -24,9 +24,9 @@ class SwiGLU(nn.Module):
         in_dtype = x.dtype
         x.to(torch.float32)
 
-        y = self.Swish(x @ self.weight1)
-        v = x @ self.weight3 
-        out = (y * v) @ self.weight2
+        y = self.Swish(self.weight1 @ x)
+        v = self.weight3 @ x
+        out = self.weight2 @ (y * v)
         return out.to(in_dtype)
     
     @staticmethod
