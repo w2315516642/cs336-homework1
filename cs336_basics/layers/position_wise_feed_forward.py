@@ -31,7 +31,7 @@ class SwiGLU(nn.Module):
     
     @staticmethod
     def Swish(x: torch.Tensor) -> torch.Tensor:
-        return x * torch.sigmoid(x, dim=-1)
+        return x * torch.sigmoid(x)
 
 
 if __name__ == "__main__":
