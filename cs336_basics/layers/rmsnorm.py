@@ -16,7 +16,7 @@ class RMSNorm(nn.Module):
         x = x.to(torch.float32)
         
         factor = (
-            torch.sum(x[..., :] ** 2, keepdim=True)
+            torch.sum(x[..., :] ** 2, dim=-1, keepdim=True)
             / self.d_model 
             + self.eps
         )
@@ -30,3 +30,14 @@ class RMSNorm(nn.Module):
     @weight.setter
     def weight(self, _weights):
         self._weight = nn.Parameter(_weights)
+
+
+if __name__ == "__main__":
+    d_model = 128
+    rms = RMSNorm(d_model)
+
+    x = torch.randn(d_model)
+    print(f"shape of in_features: {x.shape}")
+
+    y = rms(x)
+    print(y)
