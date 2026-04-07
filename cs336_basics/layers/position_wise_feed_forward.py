@@ -25,8 +25,8 @@ class SwiGLU(nn.Module):
         x.to(torch.float32)
 
         y = self.Swish(x @ self.weight1)
-        v = x @ self.weight2 
-        out = (y * v) @ self.weight3
+        v = x @ self.weight3 
+        out = (y * v) @ self.weight2
         return out.to(in_dtype)
     
     @staticmethod
