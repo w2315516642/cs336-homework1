@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 class SwiGLU(nn.Module):
-    def __init__(self, d_model, d_ff, deivce=None, dtype=None) -> None:
+    def __init__(self, d_model, d_ff, device=None, dtype=None) -> None:
         super().__init__()
 
         kwargs = {"device": device, "dtype": dtype}
