@@ -37,7 +37,7 @@ class MultiHeadAttention(nn.Module):
 
         if is_rope and token_positions is not None:
             q_h = self.rope(q_h, token_positions)
-            k_h = self.ropt(k_h, token_positions)
+            k_h = self.rope(k_h, token_positions)
 
         seq_len = q_h.size()[-2]
         mask = [[True if x <= i else False for x in range(seq_len)] for i in range(seq_len)]
