@@ -39,7 +39,8 @@ if __name__ == "__main__":
     d_model = 64
     d_ff = 128
     model = SwiGLU(d_model, d_ff)
-
+    w1 = torch.randn((d_model, d_ff))
+    model.weight1.weight.data = w1
     x = torch.randn((6, 12, d_model), dtype=torch.float16)
 
     y = model(x)
