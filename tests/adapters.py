@@ -91,12 +91,12 @@ def run_swiglu(
     # swiglu.w1.weight.data = w1_weight
     # swiglu.w2.weight.data = w2_weight
     # swiglu.w3.weight.data = w3_weight
-    print(w1_weight.shape, w2_weight.shape, w3_weight.shape)
+    
     model = SwiGLU(d_model, d_ff)
     model.weight1 = nn.Parameter(w1_weight)
     model.weight2 = nn.Parameter(w2_weight)
     model.weight3 = nn.Parameter(w3_weight)
-    print(model.weight1.shape, model.weight2.shape, model.weight3.shape, in_features.shape)
+
     return model(in_features)
 
 
@@ -118,8 +118,11 @@ def run_scaled_dot_product_attention(
     Returns:
         Float[Tensor, " ... queries d_v"]: Output of SDPA
     """
-    raise NotImplementedError
+    model = ScaleDotProductAttention()
+    return model(Q, K, V, mask)
 
+
+from cs336_basics.layers.multihead_self_attention import MultiHeadAttention
 
 def run_multihead_self_attention(
     d_model: int,
@@ -152,7 +155,12 @@ def run_multihead_self_attention(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    model = MultiHeadAttention(d_model, num_heads)
+    qkv_weight = torch.concat((q_proj_weight, k_proj_weight, v_proj_weight), dim=-2).transpose(-1, -2)
+    model.w_qkv.weight.data = qkv_weight
+    model.w_o.weight.data = o_proj_weight.transpose(-1, -2)
+
+    return model(in_features)
 
 
 def run_multihead_self_attention_with_rope(
@@ -433,6 +441,7 @@ def run_get_batch(
     """
     raise NotImplementedError
 
+from cs336_basics.layers.scale_dot_product_attention import ScaleDotProductAttention
 
 def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, " ..."]:
     """
@@ -447,7 +456,7 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
         Float[Tensor, "..."]: Tensor of with the same shape as `in_features` with the output of
         softmax normalizing the specified `dim`.
     """
-    raise NotImplementedError
+    return ScaleDotProductAttention.softmax(in_features, dim)
 
 
 def run_cross_entropy(
