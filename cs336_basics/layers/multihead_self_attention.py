@@ -21,9 +21,9 @@ class MultiHeadAttention(nn.Module):
         #                                     -> [batch, ..., num_heads, seq_len, d_k]
         qkv_shape = q.size()[:-1]
         
-        q_h = q.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-2, -1)
-        k_h = k.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-2, -1)
-        v_h = v.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-2, -1)
+        q_h = q.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-3, -2)
+        k_h = k.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-3, -2)
+        v_h = v.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-3, -2)
 
         d_k = q_h.size()[-1]
         mask = [[True if x <= i else False for x in range(d_k)] for i in range(d_k)]
