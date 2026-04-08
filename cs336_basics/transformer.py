@@ -18,8 +18,8 @@ class Transformer(nn.Module):
         num_heads: int,
         d_ff: int,
         theta: int,
-        device: torch.device,
-        dtype: torch.dtype
+        device: torch.device=None,
+        dtype: torch.dtype=None
     ) -> None:
         super().__init__()
 
