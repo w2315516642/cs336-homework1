@@ -59,3 +59,13 @@ def print_max_n(dictionary: Dict[str, int], n: int, idx_key: int = 1) -> None:
     sorted_dict = sorted(dictionary.items(), key=lambda x: x[idx_key], reverse=True)
     for i in range(n):
         print(sorted_dict[i])
+
+
+def make_divisible(x: int, divisor: int=64, min_value: int=None) -> int:
+    if min_value is None:
+        min_value = divisor
+    # 四舍五入
+    new_x = max(min_value, int(x + divisor / 2) // divisor * divisor)
+    if new_x < 0.9 * x:
+        new_x += divisor
+    return new_x
