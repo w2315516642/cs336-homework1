@@ -46,4 +46,4 @@ class Transformer(nn.Module):
             x = layer(x)
         x = self.norm(x)
         x = self.linear(x)
-        return softmax(x)
+        return x
