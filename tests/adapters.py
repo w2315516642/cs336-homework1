@@ -233,6 +233,8 @@ def run_rope(
     return model(in_query_or_key, token_positions)
 
 
+from cs336_basics.layers.transformer_block import TransformerBlock
+
 def run_transformer_block(
     d_model: int,
     num_heads: int,
@@ -303,7 +305,24 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    raise NotImplementedError
+    model = TransformerBlock(d_model, num_heads, d_ff, max_seq_len, theta)
+    # attention
+    q_proj_weight = weights['attn.q_proj.weight']
+    k_proj_weight = weights['attn.k_proj.weight']
+    v_proj_weight = weights['attn.v_proj.weight']
+    o_proj_weight = weights['attn.output_proj.weight']
+    qkv_weight = torch.concat((q_proj_weight, k_proj_weight, v_proj_weight), dim=-2).transpose(-1, -2)
+    model.attention.w_qkv.weight.data = qkv_weight
+    model.attention.w_o.weight.data = o_proj_weight.transpose(-1, -2)
+    # rms-norm
+    model.rmsnorm1.weight.data = weights['ln1.weight']
+    model.rmsnorm2.weight.data = weights['ln2.weight']
+    # ffn(swiglu)
+    model.swiglu.weight1.weight.data = weights['ffn.w1.weight']
+    model.swiglu.weight2.weight.data = weights['ffn.w2.weight']
+    model.swiglu.weight3.weight.data = weights['ffn.w3.weight']
+
+    return model(in_features)
 
 
 def run_transformer_lm(
