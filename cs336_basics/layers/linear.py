@@ -21,7 +21,7 @@ class Linear(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: [batch, ]
-        out = x @ self.weight.T
+        out = x @ self.weight
         return out
         
 
