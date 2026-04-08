@@ -16,7 +16,7 @@ class RotaryPositionalEmbedding(nn.Module):
         self.register_buffer("rotation", rotation)
 
 
-    def forward(self, x: torch.Tensor, token_positions: int[torch.Tensor]) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, token_positions: torch.Tensor) -> torch.Tensor:
         f"""
             x: [batch, ..., seq_len, d_model]
             tp: [batch, ..., seq_len]
