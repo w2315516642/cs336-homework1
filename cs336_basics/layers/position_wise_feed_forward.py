@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from .linear import Linear
 
 class SwiGLU(nn.Module):
     def __init__(self, d_model, d_ff, device=None, dtype=None) -> None:
@@ -7,17 +8,18 @@ class SwiGLU(nn.Module):
 
         kwargs = {"device": device, "dtype": dtype}
         
-        # multipler = 64
-        # d_ff = math.ceil(d_ff / multipler) * multipler
-        
-        self.weight1 = nn.Parameter(torch.empty((d_ff, d_model), **kwargs))
-        self.weight2 = nn.Parameter(torch.empty((d_model, d_ff), **kwargs))
-        self.weight3 = nn.Parameter(torch.empty((d_ff, d_model), **kwargs))
+        self.weight1 = Linear(d_model, d_ff, **kwargs)
+        self.weight2 = Linear(d_ff, d_model, **kwargs)
+        self.weight3 = Linear(d_model, d_ff, **kwargs)
 
-        sigma = torch.sqrt(torch.tensor(2 / (d_model + d_ff)))
-        self.weight1 = nn.init.trunc_normal_(self.weight1, std=sigma, a=-3 * sigma, b=3 * sigma)
-        self.weight2 = nn.init.trunc_normal_(self.weight2, std=sigma, a=-3 * sigma, b=3 * sigma)
-        self.weight3 = nn.init.trunc_normal_(self.weight3, std=sigma, a=-3 * sigma, b=3 * sigma)
+        # self.weight1 = nn.Parameter(torch.empty((d_ff, d_model), **kwargs))
+        # self.weight2 = nn.Parameter(torch.empty((d_model, d_ff), **kwargs))
+        # self.weight3 = nn.Parameter(torch.empty((d_ff, d_model), **kwargs))
+
+        # sigma = torch.sqrt(torch.tensor(2 / (d_model + d_ff)))
+        # self.weight1 = nn.init.trunc_normal_(self.weight1, std=sigma, a=-3 * sigma, b=3 * sigma)
+        # self.weight2 = nn.init.trunc_normal_(self.weight2, std=sigma, a=-3 * sigma, b=3 * sigma)
+        # self.weight3 = nn.init.trunc_normal_(self.weight3, std=sigma, a=-3 * sigma, b=3 * sigma)
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         in_dtype = x.dtype
