@@ -19,7 +19,7 @@ class ScaleDotProductAttention(nn.Module):
             v: [batch, ..., seq_len, d_v]
             mask: [seq_len, seq_len] | None
         """
-        _, d_k = k.size()[-2:]
+        d_k = k.size()[-1]
         
         k_t = k.transpose(-2, -1)
         score = (q @ k_t) / math.sqrt(d_k)

@@ -16,7 +16,7 @@ class MultiHeadAttention(nn.Module):
         # x: [batch, ..., seq_len, d_model]
         qkv: torch.Tensor = self.w_qkv(x)
         q, k, v = torch.chunk(qkv, chunks=3, dim=-1)
-        
+        print(q.shape, k.shape, v.shape)
         # qkv: [batch, ..., seq_len, d_model] -> [batch, ..., seq_len, num_heads, d_k]
         #                                     -> [batch, ..., num_heads, seq_len, d_k]
         qkv_shape = q.size()[:-1]
@@ -25,8 +25,8 @@ class MultiHeadAttention(nn.Module):
         k_h = k.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-3, -2)
         v_h = v.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-3, -2)
 
-        d_k = q_h.size()[-1]
-        mask = [[True if x <= i else False for x in range(d_k)] for i in range(d_k)]
+        seq_len = q_h.size()[-2]
+        mask = [[True if x <= i else False for x in range(seq_len)] for i in range(seq_len)]
         mask = torch.tensor(mask)
 
         # v_h: [batch, ..., num_heads, seq_len, d_k] -> [batch, ..., num_heads, seq_len, d_k]
