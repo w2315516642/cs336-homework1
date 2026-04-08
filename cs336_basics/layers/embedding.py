@@ -1,5 +1,5 @@
 import torch
-from torch import nan
+from torch import nn
 
 class Embedding(nn.Module):
     def __init__(
