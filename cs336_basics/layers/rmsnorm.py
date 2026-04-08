@@ -8,7 +8,7 @@ class RMSNorm(nn.Module):
         kwargs = {"device": device, "dtype": dtype}
 
         self.d_model = d_model
-        self._weight = nn.Parameter(torch.ones(d_model, **kwargs))
+        self.weight = nn.Parameter(torch.ones((d_model,), **kwargs))
         self.eps = eps
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -23,21 +23,13 @@ class RMSNorm(nn.Module):
         out = x / torch.sqrt(factor) * self.weight
         return out.to(in_dtype)
 
-    @property
-    def weight(self):
-        return self._weight
-
-    @weight.setter
-    def weight(self, _weights):
-        self._weight = nn.Parameter(_weights)
-
 
 if __name__ == "__main__":
     d_model = 128
     rms = RMSNorm(d_model)
 
-    x = torch.randn(d_model)
+    x = torch.randn((1, d_model))
     print(f"shape of in_features: {x.shape}")
 
     y = rms(x)
-    print(y)
+    print(y.shape)

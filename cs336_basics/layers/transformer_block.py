@@ -23,3 +23,17 @@ class TransformerBlock(nn.Module):
         # rms-norm + ffn(swiglu)
         y = self.swiglu(self.rmsnorm2(x))
         return x + y
+
+
+if __name__ == "__main__":
+    d_model = 64
+    d_ff = 128
+    num_heads = 8
+    max_seq_len = 1024
+    theta = 10000
+
+    model = TransformerBlock(d_model, num_heads, d_ff, max_seq_len, theta)
+
+    x = torch.randn((6, 12, d_model))
+    y = model(x)
+    print(y.shape)
