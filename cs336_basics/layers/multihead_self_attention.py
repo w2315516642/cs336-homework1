@@ -9,14 +9,19 @@ class MultiHeadAttention(nn.Module):
 
         self.num_heads = num_heads
         self.attention = ScaleDotProductAttention()
-        self.w_qkv = Linear(d_model, 3 * d_model)
+        self.w_q = Linear(d_model, d_model)
+        self.w_k = Linear(d_model, d_model)
+        self.w_v = Linear(d_model, d_model)
         self.w_o = Linear(d_model, d_model)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: [batch, ..., seq_len, d_model]
-        qkv: torch.Tensor = self.w_qkv(x)
-        q, k, v = torch.chunk(qkv, chunks=3, dim=-1)
-        print(q.shape, k.shape, v.shape)
+        # qkv: torch.Tensor = self.w_qkv(x)
+        # q, k, v = torch.chunk(qkv, chunks=3, dim=-1)
+        # print(q.shape, k.shape, v.shape)
+
+        q, k, v = self.w_q(x), self.w_k(x), self.w_v(x)
+
         # qkv: [batch, ..., seq_len, d_model] -> [batch, ..., seq_len, num_heads, d_k]
         #                                     -> [batch, ..., num_heads, seq_len, d_k]
         qkv_shape = q.size()[:-1]
@@ -33,7 +38,7 @@ class MultiHeadAttention(nn.Module):
         new_v_h: torch.Tensor = self.attention(q_h, k_h, v_h, mask)
         # v_h: [batch, ..., num_heads, seq_len, d_k] -> [batch, ..., seq_len, num_heads, d_k]
         #                                            -> [batch, ..., seq_len, num_heads * d_k]
-        v_concat = new_v_h.view(*qkv_shape, -1).contiguous()
+        v_concat = new_v_h.transpose(-3, -2).contiguous().view(*qkv_shape, -1)
         out = self.w_o(v_concat)
         return out
 
