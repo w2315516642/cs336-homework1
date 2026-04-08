@@ -2,9 +2,10 @@ import torch
 from torch import nn
 from .linear import Linear
 from .scale_dot_product_attention import ScaleDotProductAttention
+from .position_encoding import RotaryPositionalEmbedding as RoPE
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model, num_heads) -> None:
+    def __init__(self, d_model, num_heads, max_seq_len=2048, theta=10000) -> None:
         super().__init__()
 
         self.num_heads = num_heads
@@ -15,7 +16,10 @@ class MultiHeadAttention(nn.Module):
         # self.w_v = Linear(d_model, d_model)
         self.w_o = Linear(d_model, d_model)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        self.rope = RoPE(d_model // num_heads, max_seq_len, theta)
+
+
+    def forward(self, x: torch.Tensor, is_rope=False, token_positions=None) -> torch.Tensor:
         # x: [batch, ..., seq_len, d_model]
         qkv: torch.Tensor = self.w_qkv(x)
         q, k, v = torch.chunk(qkv, chunks=3, dim=-1)
@@ -30,6 +34,10 @@ class MultiHeadAttention(nn.Module):
         q_h = q.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-3, -2)
         k_h = k.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-3, -2)
         v_h = v.view(*qkv_shape, self.num_heads, -1).contiguous().transpose(-3, -2)
+
+        if is_rope and token_positions is not None:
+            q_h = self.rope(q_h, token_positions)
+            k_h = self.ropt(k_h, token_positions)
 
         seq_len = q_h.size()[-2]
         mask = [[True if x <= i else False for x in range(seq_len)] for i in range(seq_len)]

@@ -200,8 +200,15 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    model = MultiHeadAttention(d_model, num_heads, max_seq_len, theta)
+    qkv_weight = torch.concat((q_proj_weight, k_proj_weight, v_proj_weight), dim=-2).transpose(-1, -2)
+    model.w_qkv.weight.data = qkv_weight
+    model.w_o.weight.data = o_proj_weight.transpose(-1, -2)
 
+    out = model(in_features, is_rope=True, token_positions=token_positions)
+    return out
+
+from cs336_basics.layers.position_encoding import RotaryPositionalEmbedding as RoPE
 
 def run_rope(
     d_k: int,
@@ -222,7 +229,8 @@ def run_rope(
     Returns:
         Float[Tensor, " ... sequence_length d_k"]: Tensor with RoPEd input.
     """
-    raise NotImplementedError
+    model = RoPE(d_k, max_seq_len, theta)
+    return model(in_query_or_key, token_positions)
 
 
 def run_transformer_block(
