@@ -1,13 +1,11 @@
 import torch
-from torch import nn
-import sys
+from torch import nan
 
 class Embedding(nn.Module):
     def __init__(
         self, 
         num_embeddings: int, 
         embedding_dim: int,
-        weights: torch.Tensor=None, 
         device: torch.device=None, 
         dtype: torch.dtype=None
     ) -> None:
@@ -18,13 +16,11 @@ class Embedding(nn.Module):
 
         kwargs = {"device": device, "dtype": dtype}
 
-        if weights is not None:
-            self.weight = nn.Parameter(weights, **kwargs)
-        else:
-            self.weight = nn.Parameter(
+        self.weight = nn.Parameter(
                 torch.empty((num_embeddings, embedding_dim), **kwargs)
             )
-            self.weight = nn.init.trunc_normal_(self.weight, a=-3, b=3)
+        self.weight = nn.init.trunc_normal_(self.weight, a=-3, b=3)
+            
 
     def forward(self, token_ids: torch.Tensor) -> torch.Tensor:
         # token_ids: [batch, seq_len]

@@ -317,6 +317,7 @@ def run_transformer_block(
     # rms-norm
     model.rmsnorm1.weight.data = weights['ln1.weight']
     model.rmsnorm2.weight.data = weights['ln2.weight']
+    # FIXME: 这里FFN的维数是反的
     # ffn(swiglu)
     model.swiglu.weight1.weight.data = weights['ffn.w1.weight'].T
     model.swiglu.weight2.weight.data = weights['ffn.w2.weight'].T
@@ -324,6 +325,7 @@ def run_transformer_block(
     
     return model(in_features)
 
+from cs336_basics.transformer import Transformer
 
 def run_transformer_lm(
     vocab_size: int,
@@ -404,7 +406,31 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    model = Transformer(vocab_size, context_length, num_layers, d_model, num_heads, d_ff, rope_theta)
+
+    model.embedding.weight.data = weights['token_embeddings.weight']
+    for i, layer in enumerate(model.transformers):
+        q_proj_weight = weights[f'layers.{i}.attn.q_proj.weight']
+        k_proj_weight = weights[f'layers.{i}.attn.k_proj.weight']
+        v_proj_weight = weights[f'layers.{i}.attn.v_proj.weight']
+        o_proj_weight = weights[f'layers.{i}.attn.output_proj.weight']
+        qkv_weight = torch.concat((q_proj_weight, k_proj_weight, v_proj_weight), dim=-2).transpose(-1, -2)
+        layer.attention.w_qkv.weight.data = qkv_weight
+        layer.attention.w_o.weight.data = o_proj_weight.transpose(-1, -2)
+        # rms-norm
+        layer.rmsnorm1.weight.data = weights[f'layers.{i}.ln1.weight']
+        layer.rmsnorm2.weight.data = weights[f'layers.{i}.ln2.weight']
+        # FIXME: 这里FFN的维数是反的
+        # ffn(swiglu)
+        layer.swiglu.weight1.weight.data = weights[f'layers.{i}.ffn.w1.weight'].T
+        layer.swiglu.weight2.weight.data = weights[f'layers.{i}.ffn.w2.weight'].T
+        layer.swiglu.weight3.weight.data = weights[f'layers.{i}.ffn.w3.weight'].T
+
+    model.norm.weight.data = weights['ln_final.weight']
+    model.linear.weight.data = weights['lm_head.weight'].T
+
+    return model(in_indices)
+
 
 from cs336_basics.layers.rmsnorm import RMSNorm
 def run_rmsnorm(
@@ -468,7 +494,7 @@ def run_get_batch(
     """
     raise NotImplementedError
 
-from cs336_basics.layers.scale_dot_product_attention import ScaleDotProductAttention
+from cs336_basics.layers.scale_dot_product_attention import ScaleDotProductAttention, softmax
 
 def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, " ..."]:
     """
@@ -483,7 +509,7 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
         Float[Tensor, "..."]: Tensor of with the same shape as `in_features` with the output of
         softmax normalizing the specified `dim`.
     """
-    return ScaleDotProductAttention.softmax(in_features, dim)
+    return softmax(in_features, dim)
 
 
 def run_cross_entropy(

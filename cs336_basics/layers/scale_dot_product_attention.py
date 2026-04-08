@@ -2,6 +2,13 @@ import math
 import torch
 from torch import nn
 
+def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
+    max_val = torch.max(x, dim=dim, keepdim=True).values
+    x = x - max_val
+    x = torch.exp(x)
+    sum_val = torch.sum(x, dim=dim, keepdim=True)
+    return x / sum_val
+
 class ScaleDotProductAttention(nn.Module):
     def __init__(self) -> None:
         super().__init__()
@@ -27,17 +34,9 @@ class ScaleDotProductAttention(nn.Module):
         if mask is not None:
             score = score.masked_fill(mask == False, -float("inf"))
 
-        score = self.softmax(score, dim=-1)
+        score = softmax(score, dim=-1)
         v = score @ v
         return v
-
-    @staticmethod
-    def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
-        max_val = torch.max(x, dim=dim, keepdim=True).values
-        x = x - max_val
-        x = torch.exp(x)
-        sum_val = torch.sum(x, dim=dim, keepdim=True)
-        return x / sum_val
 
 
 if __name__ == "__main__":
