@@ -91,10 +91,12 @@ def run_swiglu(
     # swiglu.w1.weight.data = w1_weight
     # swiglu.w2.weight.data = w2_weight
     # swiglu.w3.weight.data = w3_weight
+    print(w1_weight.shape, w2_weight.shape, w3_weight.shape)
     model = SwiGLU(d_model, d_ff)
     model.weight1 = nn.Parameter(w1_weight)
     model.weight2 = nn.Parameter(w2_weight)
     model.weight3 = nn.Parameter(w3_weight)
+    print(model.weight1.shape, model.weight2.shape, model.weight3.shape, in_features.shape)
     return model(in_features)
 
 

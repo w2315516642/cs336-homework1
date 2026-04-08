@@ -21,11 +21,11 @@ class SwiGLU(nn.Module):
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         in_dtype = x.dtype
-        x.to(torch.float32)
+        x = x.to(torch.float32)
 
-        y = self.Swish(self.weight1 @ x)
-        v = self.weight3 @ x
-        out = self.weight2 @ (y * v)
+        y = self.Swish(x @ self.weight1.T)
+        v = x @ self.weight3.T
+        out = (y * v) @ self.weight2.T
         return out.to(in_dtype)
     
     @staticmethod
@@ -34,4 +34,12 @@ class SwiGLU(nn.Module):
 
 
 if __name__ == "__main__":
-    a = 1
+    d_model = 64
+    d_ff = 128
+    model = SwiGLU(d_model, d_ff)
+
+    x = torch.randn((6, 12, d_model), dtype=torch.float16)
+
+    y = model(x)
+    
+    
