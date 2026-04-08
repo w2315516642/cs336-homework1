@@ -17,11 +17,9 @@ class TransformerBlock(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # rms-norm + mha
-        x_res = x.copy_()
-        x = self.attention(self.rmsnorm1(x), is_rope=True)
-        x += x_res
+        y = self.attention(self.rmsnorm1(x), is_rope=True)
+        x += y
 
         # rms-norm + ffn(swiglu)
-        x_res = x.copy_()
-        x = self.swiglu(self.rmsnorm2(x))
-        return x + x_res
+        y = self.swiglu(self.rmsnorm2(x))
+        return x + y
