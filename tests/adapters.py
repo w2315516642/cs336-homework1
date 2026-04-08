@@ -318,6 +318,7 @@ def run_transformer_block(
     model.rmsnorm1.weight.data = weights['ln1.weight']
     model.rmsnorm2.weight.data = weights['ln2.weight']
     # ffn(swiglu)
+    print(d_model, d_ff)
     print(model.swiglu.weight1.weight.shape)
     print(weights['ffn.w1.weight'].shape)
     model.swiglu.weight1.weight.data = weights['ffn.w1.weight']
