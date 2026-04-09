@@ -1,13 +1,7 @@
 import math
 import torch
 from torch import nn
-
-def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
-    max_val = torch.max(x, dim=dim, keepdim=True).values
-    x = x - max_val
-    x = torch.exp(x)
-    sum_val = torch.sum(x, dim=dim, keepdim=True)
-    return x / sum_val
+from ..training_utils import softmax
 
 class ScaleDotProductAttention(nn.Module):
     def __init__(self) -> None:

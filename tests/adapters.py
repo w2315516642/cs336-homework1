@@ -496,7 +496,8 @@ def run_get_batch(
     """
     raise NotImplementedError
 
-from cs336_basics.layers.scale_dot_product_attention import ScaleDotProductAttention, softmax
+from cs336_basics.layers.scale_dot_product_attention import ScaleDotProductAttention
+from cs336_basics.training_utils import softmax
 
 def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, " ..."]:
     """
@@ -514,6 +515,8 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
     return softmax(in_features, dim)
 
 
+from cs336_basics.training_utils import cross_entropy
+
 def run_cross_entropy(
     inputs: Float[Tensor, " batch_size vocab_size"], targets: Int[Tensor, " batch_size"]
 ) -> Float[Tensor, ""]:
@@ -529,7 +532,7 @@ def run_cross_entropy(
     Returns:
         Float[Tensor, ""]: The average cross-entropy loss across examples.
     """
-    raise NotImplementedError
+    return cross_entropy(inputs, targets)
 
 
 def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float) -> None:
