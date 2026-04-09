@@ -5,19 +5,19 @@ from .rmsnorm import RMSNorm
 from .position_wise_feed_forward import SwiGLU
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model, num_heads, d_ff, max_seq_len, theta, device=None, dtype=None) -> None:
+    def __init__(self, d_model, num_heads, d_ff, device=None, dtype=None) -> None:
         super().__init__()
 
         kwargs = {"device": device, "dtype": dtype}
 
         self.rmsnorm1 = RMSNorm(d_model, **kwargs)
-        self.attention = MultiHeadAttention(d_model, num_heads, max_seq_len, theta, **kwargs)
+        self.attention = MultiHeadAttention(d_model, num_heads, **kwargs)
         self.rmsnorm2 = RMSNorm(d_model, **kwargs)
         self.swiglu = SwiGLU(d_model, d_ff, **kwargs)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, rope=None) -> torch.Tensor:
         # rms-norm + mha
-        y = self.attention(self.rmsnorm1(x), is_rope=True)
+        y = self.attention(self.rmsnorm1(x), rope)
         x += y
 
         # rms-norm + ffn(swiglu)

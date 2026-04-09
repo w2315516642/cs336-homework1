@@ -5,20 +5,20 @@ from .scale_dot_product_attention import ScaleDotProductAttention
 from .position_encoding import RotaryPositionalEmbedding as RoPE
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model, num_heads, max_seq_len=2048, theta=10000, device=None, dtype=None) -> None:
+    def __init__(self, d_model, num_heads, device=None, dtype=None) -> None:
         super().__init__()
 
         kwargs = {"device": device, "dtype": dtype}
 
         self.num_heads = num_heads
         self.attention = ScaleDotProductAttention()
-        self.w_qkv = Linear(d_model, 3 * d_model)
-        self.w_o = Linear(d_model, d_model)
+        self.w_qkv = Linear(d_model, 3 * d_model, **kwargs)
+        self.w_o = Linear(d_model, d_model, **kwargs)
 
-        self.rope = RoPE(d_model // num_heads, max_seq_len, theta, **kwargs)
+        # self.rope = RoPE(d_model // num_heads, max_seq_len, theta, **kwargs)
 
 
-    def forward(self, x: torch.Tensor, is_rope=False, token_positions=None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, rope: RoPE=None, token_positions=None) -> torch.Tensor:
         # x: [batch, ..., seq_len, d_model]
         qkv: torch.Tensor = self.w_qkv(x)
         q, k, v = torch.chunk(qkv, chunks=3, dim=-1)
@@ -36,14 +36,14 @@ class MultiHeadAttention(nn.Module):
 
         seq_len = q_h.size()[-2]
         mask = [[True if x <= i else False for x in range(seq_len)] for i in range(seq_len)]
-        mask = torch.tensor(mask)
+        mask = torch.tensor(mask).to(q.device)
 
         # rope
-        if is_rope:
+        if rope is not None:
             if not token_positions:
-                token_positions = torch.arange(0, seq_len)
-            q_h = self.rope(q_h, token_positions)
-            k_h = self.rope(k_h, token_positions)
+                token_positions = torch.arange(0, seq_len, device=q.device)
+            q_h = rope(q_h, token_positions)
+            k_h = rope(k_h, token_positions)
 
         # v_h: [batch, ..., num_heads, seq_len, d_k] -> [batch, ..., num_heads, seq_len, d_k]
         new_v_h: torch.Tensor = self.attention(q_h, k_h, v_h, mask)

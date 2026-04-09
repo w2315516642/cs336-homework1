@@ -200,12 +200,13 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    model = MultiHeadAttention(d_model, num_heads, max_seq_len, theta)
+    model = MultiHeadAttention(d_model, num_heads)
     qkv_weight = torch.concat((q_proj_weight, k_proj_weight, v_proj_weight), dim=-2).transpose(-1, -2)
     model.w_qkv.weight.data = qkv_weight
     model.w_o.weight.data = o_proj_weight.transpose(-1, -2)
 
-    out = model(in_features, is_rope=True, token_positions=token_positions)
+    rope = RoPE(d_model // num_heads, max_seq_len, theta)
+    out = model(in_features, rope=rope, token_positions=token_positions)
     return out
 
 from cs336_basics.layers.position_encoding import RotaryPositionalEmbedding as RoPE
@@ -305,7 +306,7 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    model = TransformerBlock(d_model, num_heads, d_ff, max_seq_len, theta)
+    model = TransformerBlock(d_model, num_heads, d_ff)
     # attention
     q_proj_weight = weights['attn.q_proj.weight']
     k_proj_weight = weights['attn.k_proj.weight']
@@ -323,7 +324,8 @@ def run_transformer_block(
     model.swiglu.weight2.weight.data = weights['ffn.w2.weight'].T
     model.swiglu.weight3.weight.data = weights['ffn.w3.weight'].T
     
-    return model(in_features)
+    rope = RoPE(d_model // num_heads, max_seq_len, theta)
+    return model(in_features, rope)
 
 from cs336_basics.transformer import Transformer
 

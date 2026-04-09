@@ -4,7 +4,7 @@ from typing import List
 
 from .layers.embedding import Embedding
 from .layers.transformer_block import TransformerBlock
-from .layers.scale_dot_product_attention import softmax
+from .layers.position_encoding import RotaryPositionalEmbedding as RoPE
 from .layers.linear import Linear
 from .layers.rmsnorm import RMSNorm
 
@@ -26,9 +26,10 @@ class Transformer(nn.Module):
         kwargs = {"device": device, "dtype": dtype}
 
         self.embedding = Embedding(vocab_size, d_model, **kwargs)
+        self.rope = RoPE(d_model // num_heads, context_length, theta, **kwargs)
         
         self.transformers = nn.ModuleList([
-            TransformerBlock(d_model, num_heads, d_ff, context_length, theta, **kwargs)
+            TransformerBlock(d_model, num_heads, d_ff, **kwargs)
             for _ in range(num_layers)
         ])
 
@@ -43,7 +44,7 @@ class Transformer(nn.Module):
 
         # forward
         for layer in self.transformers:
-            x = layer(x)
+            x = layer(x, self.rope)
         x = self.norm(x)
         x = self.linear(x)
         "注意这里不需要 softmax"
