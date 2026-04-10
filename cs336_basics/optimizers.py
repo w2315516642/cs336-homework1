@@ -8,18 +8,17 @@ class AdamW(torch.optim.Optimizer):
     def __init__(self, params: ParamsT, lr=1e-3, betas=(0.9, 0.95), weight_decay=0, eps=1e-8) -> None:
         if lr < 0:
             raise ValueError(f"Invaild learning rate: {lr}")
-        defaults = {"lr": lr, "m": 0, "v": 0}
+        defaults = {"lr": lr, "m": 0, "v": 0, "lamda": weight_decay, "eps": eps, "betas": betas}
         super().__init__(params, defaults)
-
-        self.beta1 = betas[0]
-        self.beta2 = betas[1]
-        self.lamda = weight_decay
-        self.eps = eps
 
     def step(self, closure: Optional[Callable]=None) -> Callable | None:
         loss = None if closure is None else closure()
         for group in self.param_groups:
             lr = group["lr"]
+            beta1, beta2 = group["betas"]
+            eps = group["eps"]
+            lamda = group["lamda"]
+
             for p in group["params"]:
                 if p.grad is None:
                     continue
@@ -30,15 +29,15 @@ class AdamW(torch.optim.Optimizer):
                 v = state.get("v", torch.zeros_like(p))   # 获取二阶动量
                 grad = p.grad.data
                 # 更新动量和学习率
-                m = self.beta1 * m + (1 - self.beta1) * grad
-                v = self.beta2 * v + (1 - self.beta2) * (grad ** 2)
-                lr_t = lr * math.sqrt(1 - self.beta2 ** t) / (1 - self.beta1 ** t)
+                m = beta1 * m + (1 - beta1) * grad
+                v = beta2 * v + (1 - beta2) * (grad ** 2)
+                lr_t = lr * math.sqrt(1 - beta2 ** t) / (1 - beta1 ** t)
                 # 更新参数
-                p.data -= lr_t * m / (torch.sqrt(v) + self.eps) + lr * self.lamda * p.data
+                p.data -= lr_t * m / (torch.sqrt(v) + eps) + lr * lamda * p.data
                 # 更新状态
-                self.state["t"] = t + 1
-                self.state[p]["m"] = m
-                self.state[p]["v"] = v
+                state["t"] = t + 1
+                state["m"] = m
+                state["v"] = v
         
         return loss
 
