@@ -32,7 +32,7 @@ class AdamW(torch.optim.Optimizer):
                 # 更新动量和学习率
                 m = self.beta1 * m + (1 - self.beta1) * grad
                 v = self.beta2 * v + (1 - self.beta2) * (grad ** 2)
-                lr_t = lr * math.sqrt((1 - self.beta2) ** t) / ((1 - self.beta1) ** t)
+                lr_t = lr * math.sqrt(1 - self.beta2 ** t) / (1 - self.beta1 ** t)
                 # 更新参数
                 p.data -= lr_t * m / (torch.sqrt(v) + self.eps)
                 p.data -= lr * self.lamda * p.data
