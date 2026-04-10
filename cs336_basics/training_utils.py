@@ -17,7 +17,9 @@ def cross_entropy(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     inputs = inputs - m
     print(f"inputs - m = {inputs}")
     log_sum = inputs.exp().sum(dim=-1).log()
+    print(f"log_sum: {log_sum}")
     loss = (log_sum - x).mean()
+    print(f"final loss: {loss}")
     return loss
 
 
