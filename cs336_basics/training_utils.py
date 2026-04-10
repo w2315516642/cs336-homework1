@@ -23,8 +23,9 @@ def cross_entropy(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     return loss
 
 
-def perplexity(inputs: torch.Tensor) -> torch.Tensor:
+def perplexity(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     "input: [batch, seq_len, vocab_size]"
+    return cross_entropy(inputs, targets).exp()
 
 
 if __name__ == "__main__":
