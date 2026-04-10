@@ -93,8 +93,8 @@ def get_batch(
         x_batched.append(seq[:-1])
         y_batched.append(seq[1:])
 
-    x = torch.tensor(x_batched, dtype=torch.long, device=device)
-    y = torch.tensor(y_batched, dtype=torch.long, device=device)
+    x = torch.tensor(np.array(x_batched), dtype=torch.long, device=device)
+    y = torch.tensor(np.array(y_batched), dtype=torch.long, device=device)
     return x, y
 
 
