@@ -5,17 +5,18 @@ from torch import nn
 from torch.optim.optimizer import ParamsT
 
 class AdamW(torch.optim.Optimizer):
-    def __init__(self, params: ParamsT, lr=1e-3, beta1=0.9, beta2=0.95, lamda=0) -> None:
+    def __init__(self, params: ParamsT, lr=1e-3, betas=(0.9, 0.95), weight_decay=0, eps=1e-8) -> None:
         if lr < 0:
             raise ValueError(f"Invaild learning rate: {lr}")
         defaults = {"lr": lr, "m": 0, "v": 0}
         super().__init__(params, defaults)
 
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.lamda = lamda
+        self.beta1 = betas[0]
+        self.beta2 = betas[1]
+        self.lamda = weight_decay
+        self.eps = eps
 
-    def step(self, closure: Optional[Callable]=None, eps=1e-8) -> Callable | None:
+    def step(self, closure: Optional[Callable]=None) -> Callable | None:
         loss = None if closure is None else closure()
         for group in self.param_groups:
             lr = group["lr"]
@@ -33,7 +34,7 @@ class AdamW(torch.optim.Optimizer):
                 v = self.beta2 * v + (1 - self.beta2) * (grad ** 2)
                 lr_t = lr * math.sqrt((1 - self.beta2) ** t) / ((1 - self.beta1) ** t)
                 # 更新参数
-                p.data -= lr_t * m / (torch.sqrt(v) + eps)
+                p.data -= lr_t * m / (torch.sqrt(v) + self.eps)
                 p.data -= lr * self.lamda * p.data
                 # 更新状态
                 self.state["t"] = t + 1
