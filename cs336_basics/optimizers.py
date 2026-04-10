@@ -26,20 +26,19 @@ class AdamW(torch.optim.Optimizer):
                 
                 state = self.state[p]
                 t = state.get("t", 1)   # 获取迭代次数，注意 t 是从 1 开始
-                m = state.get("m", 0)   # 获取一阶动量
-                v = state.get("v", 0)   # 获取二阶动量
+                m = state.get("m", torch.zeros_like(p))   # 获取一阶动量
+                v = state.get("v", torch.zeros_like(p))   # 获取二阶动量
                 grad = p.grad.data
                 # 更新动量和学习率
                 m = self.beta1 * m + (1 - self.beta1) * grad
                 v = self.beta2 * v + (1 - self.beta2) * (grad ** 2)
                 lr_t = lr * math.sqrt(1 - self.beta2 ** t) / (1 - self.beta1 ** t)
                 # 更新参数
-                p.data -= lr_t * m / (torch.sqrt(v) + self.eps)
-                p.data -= lr * self.lamda * p.data
+                p.data -= lr_t * m / (torch.sqrt(v) + self.eps) + lr * self.lamda * p.data
                 # 更新状态
                 self.state["t"] = t + 1
-                self.state["m"] = m
-                self.state["v"] = v
+                self.state[p]["m"] = m
+                self.state[p]["v"] = v
         
         return loss
 
