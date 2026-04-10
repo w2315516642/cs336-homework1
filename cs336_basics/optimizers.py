@@ -38,8 +38,10 @@ class AdamW(torch.optim.Optimizer):
                 lr_t = lr * math.sqrt(1 - beta2 ** t) / (1 - beta1 ** t)
                 # 更新参数
                 # p.data -= lr_t * m / (torch.sqrt(v) + eps) + lr * lamda * p.data
-                denom = v.sqrt().add_(eps)
-                p.addcdiv_(m, denom, value=-lr_t)
+                with torch.no_grad():
+                    p.mul_(1 - lr * lamda)
+                    denom = v.sqrt().add_(eps)
+                    p.addcdiv_(m, denom, value=-lr_t)
                 # 更新状态
                 state["t"] = t + 1
                 state["m"] = m
