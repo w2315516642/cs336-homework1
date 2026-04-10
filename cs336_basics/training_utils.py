@@ -1,5 +1,5 @@
 import torch
-from torch import nn
+from torch import isinf, isnan, nn
 from torch.nn import functional as F
 
 def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
@@ -10,11 +10,18 @@ def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
     return x / sum_val
 
 def cross_entropy(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+    is_inf = torch.isinf(inputs)
+    if True in is_inf:
+        inputs[is_inf] = -float("inf")
     m = inputs.max()
     x = inputs.gather(-1, targets.unsqueeze(-1)) - m
     log_sum = (inputs - m).exp().sum(dim=-1).log()
     loss = (log_sum - x).mean()
     return loss
+
+
+def perplexity(inputs: torch.Tensor) -> torch.Tensor:
+    "input: [batch, seq_len, vocab_size]"
 
 
 if __name__ == "__main__":
