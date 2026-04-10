@@ -10,13 +10,13 @@ def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
     return x / sum_val
 
 def cross_entropy(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-    # is_inf = torch.isinf(inputs)
-    # if True in is_inf:
-    #     inputs[is_inf] = -float("inf")
-    print(inputs)
     m = inputs.max()
+    print(f"max val in inputs: {m}")
     x = inputs.gather(-1, targets.unsqueeze(-1)) - m
-    log_sum = (inputs - m).exp().sum(dim=-1).log()
+    print(f"target val: {x}")
+    inputs = inputs - m
+    print(f"inputs - m = {inputs}")
+    log_sum = inputs.exp().sum(dim=-1).log()
     loss = (log_sum - x).mean()
     return loss
 
