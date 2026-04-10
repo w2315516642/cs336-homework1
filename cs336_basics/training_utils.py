@@ -1,5 +1,5 @@
 import torch
-from torch import isinf, isnan, nn
+from torch import nn
 from torch.nn import functional as F
 
 def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
