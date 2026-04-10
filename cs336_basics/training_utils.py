@@ -1,8 +1,10 @@
 import math
-from typing import Iterable, List
+from pathlib import Path
+from typing import Iterable, List, Tuple
 import torch
 from torch import nn
 from torch.nn import functional as F
+import numpy as np
 
 def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
     max_val = torch.max(x, dim=dim, keepdim=True).values
@@ -71,6 +73,54 @@ def gradient_clipping(
         clip_coef = min(1.0, max_l2_norm / (l2_norm + eps))
         for g in grads:
             g *= clip_coef
+
+
+def get_batch(
+    dataset: np.ndarray, 
+    batch_size: int, 
+    context_length: int, 
+    device: str=None
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    max_start = len(dataset) - context_length - 1
+    assert max_start > 0, f"""The length of dataset {len(dataset)} 
+    smaller than context length {context_length}."""
+
+    starts = np.random.randint(0, max_start + 1, size=batch_size)
+    x_batched = []
+    y_batched = []
+    for s in starts:
+        seq = dataset[s : s + context_length + 1]
+        x_batched.append(seq[:-1])
+        y_batched.append(seq[1:])
+
+    x = torch.tensor(x_batched, dtype=torch.long, device=device)
+    y = torch.tensor(y_batched, dtype=torch.long, device=device)
+    return x, y
+
+
+def save_checkpoint(
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    iteration: int,
+    save_path: str | Path,
+) -> None:
+    checkpoint = {
+        "model_state": model.state_dict(),
+        "optim_state": optimizer.state_dict(),
+        "iteration": iteration
+    }
+    torch.save(checkpoint, save_path)
+
+
+def load_checkpoint(
+    file_path: str | Path,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+) -> int:
+    checkpoint = torch.load(file_path)
+    model.load_state_dict(checkpoint["model_state"])
+    optimizer.load_state_dict(checkpoint["optim_state"])
+    return checkpoint["iteration"]
 
 
 if __name__ == "__main__":
