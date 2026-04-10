@@ -10,13 +10,11 @@ def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
     return x / sum_val
 
 def cross_entropy(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-    inputs = softmax(inputs, dim=-1).log()
-    if targets.dim() != inputs.dim():
-        num_classes = (targets.max() + 1).to(torch.int)
-        targets = F.one_hot(targets, num_classes)
-    targets = softmax(targets, dim=-1)
-    loge = targets * inputs
-    return -loge.mean()
+    m = inputs.max()
+    x = inputs.gather(-1, targets.unsqueeze(-1)) - m
+    log_sum = (inputs - m).exp().sum(dim=-1).log()
+    loss = (log_sum - x).mean()
+    return loss
 
 
 if __name__ == "__main__":
@@ -43,4 +41,6 @@ if __name__ == "__main__":
     expected = F.cross_entropy(inputs.view(-1, inputs.size(-1)), targets.view(-1))
     errors = actual - expected
 
-    print(errors.norm())
+    print(f"actual val: {actual}")
+    print(f"expected val: {expected}")
+    print(f"errors norm: {errors.norm()}")
