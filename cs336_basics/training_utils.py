@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -26,6 +27,29 @@ def cross_entropy(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
 def perplexity(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     "input: [batch, seq_len, vocab_size]"
     return cross_entropy(inputs, targets).exp()
+
+
+def cosine_learning_rate_schedule(
+    it: int,
+    max_learning_rate: float,
+    min_learning_rate: float,
+    warmup_iters: int,
+    cosine_cycle_iters: int,
+) -> float:
+    # warm-up
+    if it < warmup_iters:
+        return it / warmup_iters * max_learning_rate
+    # cosine annealing
+    if it >= warmup_iters and it <= cosine_cycle_iters:
+        at = math.cos(
+            (it - warmup_iters) 
+            / (cosine_cycle_iters - warmup_iters) 
+            * math.pi
+        )
+        at = 0.5 * (1 + at) * (max_learning_rate - min_learning_rate)
+        return min_learning_rate + at
+    # post annealing
+    return min_learning_rate
 
 
 if __name__ == "__main__":
