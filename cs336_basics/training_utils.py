@@ -1,4 +1,5 @@
 import math
+from typing import Iterable, List
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -50,6 +51,26 @@ def cosine_learning_rate_schedule(
         return min_learning_rate + at
     # post annealing
     return min_learning_rate
+
+
+def gradient_clipping(
+    params: Iterable[nn.Parameter], 
+    max_l2_norm: float,
+    eps: float=1e-6
+) -> None:
+    grads: List[torch.Tensor] = [p.grad for p in params if p.grad is not None]
+    if not grads:
+        return
+    
+    l2_norm = 0.0
+    for g in grads:
+        l2_norm += torch.sum(g ** 2)
+    l2_norm = torch.sqrt(l2_norm)
+
+    if l2_norm > max_l2_norm:
+        clip_coef = min(1.0, max_l2_norm / (l2_norm + eps))
+        for g in grads:
+            g *= clip_coef
 
 
 if __name__ == "__main__":
