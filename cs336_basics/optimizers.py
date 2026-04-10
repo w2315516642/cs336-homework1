@@ -25,7 +25,7 @@ class AdamW(torch.optim.Optimizer):
                     continue
                 
                 state = self.state[p]
-                t = state.get("t", 0)   # 获取迭代次数
+                t = state.get("t", 1)   # 获取迭代次数，注意 t 是从 1 开始
                 m = state.get("m", 0)   # 获取一阶动量
                 v = state.get("v", 0)   # 获取二阶动量
                 grad = p.grad.data
