@@ -596,7 +596,7 @@ class BPETokenizer(Tokenizer):
 
 def encode_tiny():
     file_path = Path(__file__).parent.parent / "data" / "TinySmall.txt"
-    save_path = Path(__file__).parent.parent / "data" / "TinySmall.bin"
+    save_path = Path(__file__).parent.parent / "data" / "TinySmall"
 
     params_path = Path(__file__).parent / "tiny_params.bin"
 
@@ -615,5 +615,5 @@ def encode_owt():
 
 
 if __name__ == "__main__":
-    # encode_tiny()
-    encode_owt()
+    encode_tiny()
+    # encode_owt()

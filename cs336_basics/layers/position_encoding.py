@@ -5,9 +5,11 @@ class RotaryPositionalEmbedding(nn.Module):
     def __init__(self, d_model, max_seq_len=2048, base=10000, device=None, dtype=None) -> None:
         super().__init__()
 
-        rotation = torch.empty((max_seq_len, d_model, 2), device=device)
+        kwargs = {"device": device, "dtype": dtype}
 
-        thetas = 1.0 / (base ** (torch.arange(0, d_model, 2).to(dtype).to(device) / d_model))
+        rotation = torch.empty((max_seq_len, d_model, 2), **kwargs)
+
+        thetas = 1.0 / (base ** (torch.arange(0, d_model, 2, **kwargs) / d_model))
         for m in range(max_seq_len):
             m_thetas = m * thetas
             rotation[m, :, 0] = m_thetas.cos().repeat_interleave(2)

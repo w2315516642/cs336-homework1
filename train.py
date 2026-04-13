@@ -1,4 +1,4 @@
-import wandb
+import wandb, csv
 from loguru import logger
 from pathlib import Path
 import numpy as np
@@ -50,6 +50,13 @@ def main_pipeline():
     if not Path.exists(output_dir):
         output_dir.mkdir(parents=True, exist_ok=True)
     config.to_yaml(output_dir / "config.yaml")
+    # 创建csv写入部分
+    csv_path = output_dir / "train_log.csv"
+    csv_headers = ["iteration", "loss", "lr", "batch_per_sec", "token_per_sec", "total_tokens"]
+    if not config.is_checkpoint or not csv_path.exists():
+            with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(csv_headers)
 
     start = time.time()
     dura_batch = 0
@@ -64,7 +71,7 @@ def main_pipeline():
             config.train.warmup_iters,
             config.train.cosine_iters
         )
-        for group in optim.param_groups["group"]:
+        for group in optim.param_groups:
             group["lr"] = lr
 
         x_batch, y_batch = get_batch(
@@ -105,6 +112,17 @@ def main_pipeline():
                 "train/token_per_sec": token_per_sec,
                 "train/total_tokens": total_tokens
             })
+            # 写入csv
+            with open(csv_path, 'a', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    itera, 
+                    f"{loss.item():.5f}", 
+                    f"{lr:.8f}", 
+                    f"{batch_per_sec:.2f}", 
+                    f"{token_per_sec:.2f}", 
+                    total_tokens
+                ])
             logger.info(f"Iteration: {itera}, train loss: {loss.item():.5f}")
             start = time.time()
         

@@ -21,7 +21,7 @@ class ScaleDotProductAttention(nn.Module):
             mask: [seq_len, seq_len] | None
         """
         d_k = k.size()[-1]
-        
+
         k_t = k.transpose(-2, -1)
         score = (q @ k_t) / math.sqrt(d_k)
 
@@ -29,6 +29,7 @@ class ScaleDotProductAttention(nn.Module):
             score = score.masked_fill(mask == False, -float("inf"))
 
         score = softmax(score, dim=-1)
+
         v = score @ v
         return v
 

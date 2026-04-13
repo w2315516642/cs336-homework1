@@ -43,10 +43,11 @@ class Transformer(nn.Module):
             token_ids = torch.tensor(token_ids) 
         # embedding
         x = self.embedding(token_ids)
-
+        
         # forward
         for layer in self.transformers:
             x = layer(x, self.rope)
+
         x = self.norm(x)
         x = self.linear(x)
         "注意这里不需要 softmax"

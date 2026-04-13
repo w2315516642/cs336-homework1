@@ -7,11 +7,14 @@ from torch.nn import functional as F
 import numpy as np
 
 def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
+    in_dtype = x.dtype
+    x.to(torch.float32)
     max_val = torch.max(x, dim=dim, keepdim=True).values
     x = x - max_val
     x = torch.exp(x)
     sum_val = torch.sum(x, dim=dim, keepdim=True)
-    return x / sum_val
+    o = x / sum_val
+    return o.to(in_dtype)
 
 def cross_entropy(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     m, _ = inputs.max(dim=-1, keepdim=True)
@@ -20,7 +23,7 @@ def cross_entropy(inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     # print(f"target val: {x}")
     inputs = inputs - m
     # print(f"inputs - m = {inputs}")
-    log_sum = inputs.exp().sum(dim=-1).log()
+    log_sum = inputs.exp().sum(dim=-1, keepdim=True).log()
     # print(f"log_sum: {log_sum}")
     loss = (log_sum - x).mean()
     # print(f"final loss: {loss}")

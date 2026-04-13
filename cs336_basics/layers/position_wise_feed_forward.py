@@ -22,17 +22,17 @@ class SwiGLU(nn.Module):
         # self.weight3 = nn.init.trunc_normal_(self.weight3, std=sigma, a=-3 * sigma, b=3 * sigma)
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        in_dtype = x.dtype
-        x = x.to(torch.float32)
-
         y = self.Swish(self.weight1(x))
         v = self.weight3(x)
         out = self.weight2(y * v)
-        return out.to(in_dtype)
+        return out
     
     @staticmethod
     def Swish(x: torch.Tensor) -> torch.Tensor:
-        return x * torch.sigmoid(x)
+        in_dtype = x.dtype
+        x = x.to(torch.float32)
+        out = x * torch.sigmoid(x)
+        return out.to(in_dtype)
 
 
 if __name__ == "__main__":

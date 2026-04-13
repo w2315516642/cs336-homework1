@@ -22,6 +22,7 @@ class TransformerBlock(nn.Module):
 
         # rms-norm + ffn(swiglu)
         y = self.swiglu(self.rmsnorm2(x))
+
         return x + y
 
 
