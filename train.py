@@ -92,9 +92,9 @@ def main_pipeline():
         optim.step()
 
         # 更新统计信息
-        dura_batch += config.train.batch_size
-        dura_token += config.train.batch_size * config.model.context_length
-        total_tokens += config.train.batch_size * config.model.context_length
+        dura_batch += x_batch.size()[0]
+        dura_token += x_batch.numel()
+        total_tokens += x_batch.numel()
 
         # 打印信息
         if itera % config.train.log_interval == 0:
