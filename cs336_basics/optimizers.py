@@ -3,6 +3,7 @@ from typing import Callable, Optional, Dict, Any
 import torch
 from torch import nn
 from torch.optim.optimizer import ParamsT
+from .configs import Config
 
 class AdamW(torch.optim.Optimizer):
     def __init__(self, params: ParamsT, lr=1e-3, betas=(0.9, 0.95), weight_decay=0, eps=1e-8) -> None:
@@ -48,6 +49,17 @@ class AdamW(torch.optim.Optimizer):
                 state["v"] = v
         
         return loss
+
+    @classmethod
+    def from_config(cls, params: ParamsT, config: Config):
+        optim_config = config.optim
+        return cls(
+            params,
+            lr=optim_config.min_lr,
+            betas=optim_config.betas,
+            weight_decay=optim_config.weight_decay,
+            eps=optim_config.eps,
+        )
 
 class SGD(torch.optim.Optimizer):
     def __init__(self, params: ParamsT, lr=1e-3):

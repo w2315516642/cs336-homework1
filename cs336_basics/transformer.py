@@ -8,6 +8,8 @@ from .layers.position_encoding import RotaryPositionalEmbedding as RoPE
 from .layers.linear import Linear
 from .layers.rmsnorm import RMSNorm
 
+from .configs import Config
+
 class Transformer(nn.Module):
     def __init__(
         self, 
@@ -49,3 +51,18 @@ class Transformer(nn.Module):
         x = self.linear(x)
         "注意这里不需要 softmax"
         return x
+    
+    @classmethod
+    def from_config(cls, config: Config):
+        model_config = config.model
+        return cls(
+            vocab_size=model_config.vocab_size,
+            context_length=model_config.context_length,
+            num_layers=model_config.num_layers,
+            d_model=model_config.d_model,
+            num_heads=model_config.num_heads,
+            d_ff=model_config.d_ff,
+            theta=model_config.theta,
+            device=config.device,
+            dtype=config.dtype
+        )
