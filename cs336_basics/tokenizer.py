@@ -568,26 +568,42 @@ class BPETokenizer(Tokenizer):
             token_id_list = self.encode(chunk)
             for token_id in token_id_list:
                 yield token_id
-
-    def encode_file(self, file_path: str, save_path: str) -> None:
+    
+    def encode_file(self, file_path: str, save_path: str, num_processors: int=64) -> None:
         if Path.exists(save_path):
             print(f"The tokenized file {save_path} has been existed.")
             return
 
-        token_ids = []
-        num_bytes = 0
-        with open(file_path, 'r', encoding="utf-8") as f:
-            for token_id in self.encode_iterable(f):
-                token_ids.append(token_id)
-                print(sys.getsizeof(token_id))
-                num_bytes += len(self.vocab[token_id])    
+        num_chunks = num_processors * 10
+        boundaries = find_chunk_boundaries(file_path, num_chunks, b"<|endoftext|>")
+        tasks = [(boundaries[i], boundaries[i + 1]) for i in range(len(boundaries) - 1)]
 
-        compression_rate = num_bytes / len(token_ids)
-        np.save(save_path, np.array(token_ids))
+        worker_func = partial(_process_chunk, self, file_path)
+        
+        token_ids = []
+        # num_bytes = 0
+        # with open(file_path, 'r', encoding="utf-8") as f:
+        #     for token_id in self.encode_iterable(f):
+        #         token_ids.append(token_id)
+        #         num_bytes += len(self.vocab[token_id])   
+        # compression_rate = num_bytes / len(token_ids)
+        # print(f"compression rate is {compression_rate}")
+
+        with open(save_path, "wb") as file:
+            with Pool(num_processors) as pool:
+                for token_ids_ in tqdm(
+                    pool.imap(worker_func, tasks),
+                    total=len(tasks),
+                    desc="Tokenizing"
+                ):
+                    token_ids_arr = np.array(token_ids_, dtype=np.uint16)
+                    token_ids.append(token_ids_)
+
+            token_ids = np.concatenate(token_ids)
+            token_ids = token_ids.reshape(-1)
+            np.save(save_path, token_ids)
 
         print(f"The result of file {file_path} were saved in {save_path}")
-        print(f"compression rate is {compression_rate}")
-
 
     def decode(self, tokens: List[int]) -> str:
         decode_bytes = b""
@@ -595,10 +611,21 @@ class BPETokenizer(Tokenizer):
             decode_bytes += self.vocab[token]
         return decode_bytes.decode(encoding="utf-8", errors="ignore")
 
+def _process_chunk(
+    tokenizer: BPETokenizer, 
+    file_path: str, 
+    boundary: Tuple[int, int]
+) -> List[int]:
+    start, end = boundary
+    with open(file_path, "r", encoding="utf-8") as f:
+        f.seek(start)
+        text = f.read(end - start)
+    return tokenizer.encode(text)
+
 
 def encode_tiny():
-    file_path = Path(__file__).parent.parent / "data" / "TinySmall.txt"
-    save_path = Path(__file__).parent.parent / "data" / "TinySmall"
+    file_path = Path(__file__).parent.parent / "data" / "TinyStoriesV2-GPT4-train.txt"
+    save_path = Path(__file__).parent.parent / "data" / "TinyTrain.npy"
 
     params_path = Path(__file__).parent / "tokenizer_params.bin"
 
