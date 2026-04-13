@@ -3,6 +3,8 @@ from loguru import logger
 from pathlib import Path
 import numpy as np
 import time
+from tqdm import tqdm
+from datetime import datetime
 
 from cs336_basics.configs import Config
 from cs336_basics.transformer import Transformer
@@ -46,7 +48,8 @@ def main_pipeline():
         project="cs336-hw1",
         config=config.to_dict()
     )
-    output_dir = Path(config.train.output_dir)
+    current_time = datetime.now().strftime('%Y_%m%d_%H%M')
+    output_dir = Path(config.train.output_dir) / current_time
     if not Path.exists(output_dir):
         output_dir.mkdir(parents=True, exist_ok=True)
     config.to_yaml(output_dir / "config.yaml")

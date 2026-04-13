@@ -14,7 +14,7 @@ class Linear(nn.Module):
                 size=(in_features, out_features), **kwargs
             ))
         # 参数截断
-        sigma = torch.sqrt(torch.tensor(2.0 / (in_features + out_features)))
+        sigma = torch.sqrt(torch.tensor(2.0 / (in_features + out_features), **kwargs))
         self.weight = nn.init.trunc_normal_(
             self.weight, std=sigma,a=-3 * sigma, b=3 * sigma
         )
