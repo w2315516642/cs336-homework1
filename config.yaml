@@ -21,9 +21,9 @@ optim_config:
 # 训练流程配置 (对应 train_config 别名)
 train_config:
   batch_size: 64
-  total_iters: 100        # 注意：代码里 alias 是 total_iters
-  warmup_iters: 20
-  cosine_iters: 70
+  total_iters: 10        # 注意：代码里 alias 是 total_iters
+  warmup_iters: 2
+  cosine_iters: 7
   max_l2_norm: 1.0
   checkpoint_interval: 10 # 注意：代码里 alias 是 checkpoint_interval
   output_dir: "./output/"
