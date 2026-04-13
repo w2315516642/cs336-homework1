@@ -165,7 +165,8 @@ cython_debug/
 *.csv
 *.txt
 *.bin
+*.pt
 
 data/
 wandb/
-output/*.pt
+output/
