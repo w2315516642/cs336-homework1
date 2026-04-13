@@ -5,6 +5,7 @@ from tqdm import tqdm
 import regex as re
 import pickle, struct
 import numpy as np
+import sys
 
 from multiprocessing import Pool
 from collections import Counter
@@ -578,6 +579,7 @@ class BPETokenizer(Tokenizer):
         with open(file_path, 'r', encoding="utf-8") as f:
             for token_id in self.encode_iterable(f):
                 token_ids.append(token_id)
+                print(sys.getsizeof(token_id))
                 num_bytes += len(self.vocab[token_id])    
 
         compression_rate = num_bytes / len(token_ids)
@@ -598,7 +600,7 @@ def encode_tiny():
     file_path = Path(__file__).parent.parent / "data" / "TinySmall.txt"
     save_path = Path(__file__).parent.parent / "data" / "TinySmall"
 
-    params_path = Path(__file__).parent / "tiny_params.bin"
+    params_path = Path(__file__).parent / "tokenizer_params.bin"
 
     tokenizer = BPETokenizer.from_files(params_path, ['<|endoftext|>'])
     tokenizer.encode_file(file_path, save_path)
