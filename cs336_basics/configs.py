@@ -36,10 +36,13 @@ class TrainConfig(BaseModel):
     max_l2_norm: float = Field(default=1.0)
 
     ckpt_interval: int = Field(default=10, alias="checkpoint_interval")
+    max_ckpt_to_keep: int = Field(default=3)
     output_dir: str = Field(default="./output/")
     train_data: str = Field(default="./data/owt_small.npy")
     valid_data: str = Field(default="./data/owt_small.npy")
     log_interval: int = Field(default=10)
+    valid_interval: int = Field(default=10)
+    valid_iters: int = Field(default=20)
 
 
 class Config(BaseModel):

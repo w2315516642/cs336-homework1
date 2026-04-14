@@ -1,3 +1,5 @@
+import torch
+import torch.cuda.nvtx as nvtx
 import wandb, csv
 from loguru import logger
 from pathlib import Path
@@ -17,6 +19,41 @@ from cs336_basics.training_utils import (
     cosine_learning_rate_schedule, 
     cross_entropy,
 )
+
+
+def delete_old_ckpt(output_dir: Path, max_to_keep: int) -> None:
+    ckpt_files = list(output_dir.glob("checkpoint_*.pt"))
+    ckpt_files.sort(key=lambda x: int(x.stem.split('_')[1]))
+
+    if len(ckpt_files) > max_to_keep:
+        num_to_delete = len(ckpt_files) - max_to_keep
+        for i in range(num_to_delete):
+            ckpt_to_del = ckpt_files[i]
+            # 用try防止删除出问题中断训练
+            try:
+                ckpt_to_del.unlink()
+            except Exception as e:
+                logger.info(f"Failed to delete {ckpt_to_del}: {e}")
+                continue
+
+
+@torch.no_grad()
+def validate_model(model, dataset, config):
+    model.eval()
+    eval_iters = config.train.valid_iters
+    losses = torch.empty(eval_iters)
+    for i in range(eval_iters):
+        x_batch, y_batch = get_batch(
+            dataset,
+            batch_size=config.train.batch_size,
+            context_length=config.model.context_length,
+            device=config.device,
+        )
+        logits = model(x_batch)
+        loss = cross_entropy(logits, y_batch)
+        losses[i] = loss
+    model.train()
+    return losses.mean().item()
 
 
 def main_pipeline():
@@ -43,6 +80,7 @@ def main_pipeline():
     logger.info("加载训练数据集")
     # 获取数据集
     train_dataset = np.memmap(config.train.train_data, dtype=np.uint16)
+    valid_dataset = np.memmap(config.train.valid_data, dtype=np.uint16)
 
     wandb.init(
         project="cs336-hw1",
@@ -65,7 +103,10 @@ def main_pipeline():
     dura_batch = 0
     dura_token = 0
     total_tokens = 0
-    for itera in range(cur_iters + 1, total_iters + 1):
+    for itera in tqdm(
+        range(cur_iters + 1, total_iters + 1), 
+        desc="Training"
+    ):
         # 计算本轮更新的学习率
         lr = cosine_learning_rate_schedule(
             itera,
@@ -77,22 +118,26 @@ def main_pipeline():
         for group in optim.param_groups:
             group["lr"] = lr
 
-        x_batch, y_batch = get_batch(
-            train_dataset,
-            batch_size=config.train.batch_size,
-            context_length=config.model.context_length,
-            device=config.device,
-        )
+        with nvtx.range("获取训练数据"):
+            x_batch, y_batch = get_batch(
+                train_dataset,
+                batch_size=config.train.batch_size,
+                context_length=config.model.context_length,
+                device=config.device,
+            )
         # 清空优化器梯度
         optim.zero_grad()
-        # 计算loss，反向传播计算梯度
-        logits = model(x_batch)
-        loss = cross_entropy(logits, y_batch)
-        loss.backward()
-        # 对计算出来的梯度进行裁剪
-        gradient_clipping(model.parameters(), config.train.max_l2_norm)
-        # 更新梯度
-        optim.step()
+        with nvtx.range("前向传播"):
+            logits = model(x_batch)
+        
+        with nvtx.range("计算loss+反向传播+梯度更新"):
+            # 计算loss，反向传播计算梯度
+            loss = cross_entropy(logits, y_batch)
+            loss.backward()
+            # 对计算出来的梯度进行裁剪
+            gradient_clipping(model.parameters(), config.train.max_l2_norm)
+            # 更新梯度
+            optim.step()
 
         # 更新统计信息
         dura_batch += x_batch.size()[0]
@@ -120,22 +165,36 @@ def main_pipeline():
                 writer = csv.writer(f)
                 writer.writerow([
                     itera, 
-                    f"{loss.item():.5f}", 
-                    f"{lr:.8f}", 
+                    f"{loss.item():.4f}", 
+                    f"{lr:.6f}", 
                     f"{batch_per_sec:.2f}", 
                     f"{token_per_sec:.2f}", 
                     total_tokens
                 ])
-            logger.info(f"Iteration: {itera}, train loss: {loss.item():.5f}")
+            logger.info(f"Itera: {itera}, train loss: {loss.item():.4f}, duration: {duration:.3f} s")
             start = time.time()
         
         # 保存checkpoint
         if itera % config.train.ckpt_interval == 0:
+            delete_old_ckpt(output_dir, config.train.max_ckpt_to_keep - 1)
+            
             save_path = output_dir / f"checkpoint_{itera}.pt"
             save_checkpoint(model, optim, itera, save_path)
-        
+
+        # 验证集测试
+        if itera % config.train.valid_interval == 0:
+            v_time = time.time()
+            val_loss = validate_model(model, valid_dataset, config)
+            wandb.log({
+                "valid/loss": val_loss,
+                "valid/iteration": itera,
+            })
+            logger.opt(colors=True).info(f"<cyan>Itera: {itera}, val loss: {val_loss:.4f}</cyan>")
+            v_duration = time.time() - v_time
+            start += v_duration
+    
     wandb.finish()
-    logger.info("=" * 10 + f" Training complete, final loss: {loss.item():.5f} " + "=" * 10)
+    logger.info(f" Training complete, final loss: {loss.item():.4f} ")
 
 
 if __name__ == "__main__":
