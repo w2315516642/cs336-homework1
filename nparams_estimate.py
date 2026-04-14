@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # 参数量计算（没有 bias）
     # embedding + RoPE层参数量
     embedding = vocab_size * d_model
-    rope = vocab_size * (d_model / num_heads) * 2 / 2
+    rope = context_length * (d_model / num_heads) * 2 / 2
     
     # 一个 transformer block 内的参数量
     rms = d_model * 2  # 两个 RMS 块
