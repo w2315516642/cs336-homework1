@@ -573,13 +573,13 @@ class BPETokenizer(Tokenizer):
             print(f"The tokenized file {save_path} has been existed.")
             return
 
-        num_chunks = num_processors * 10
+        num_chunks = num_processors * 20
         boundaries = find_chunk_boundaries(file_path, num_chunks, b"<|endoftext|>")
         tasks = [(boundaries[i], boundaries[i + 1]) for i in range(len(boundaries) - 1)]
-
+        
         worker_func = partial(_process_chunk, self, file_path)
         
-        token_ids = []
+        # token_ids = []
         # num_bytes = 0
         # with open(file_path, 'r', encoding="utf-8") as f:
         #     for token_id in self.encode_iterable(f):
@@ -590,17 +590,16 @@ class BPETokenizer(Tokenizer):
 
         with open(save_path, "wb") as file:
             with Pool(num_processors) as pool:
-                for token_ids_ in tqdm(
+                for token_ids_arr in tqdm(
                     pool.imap(worker_func, tasks),
                     total=len(tasks),
                     desc="Tokenizing"
                 ):
-                    token_ids_arr = np.array(token_ids_, dtype=np.uint16)
-                    token_ids.append(token_ids_)
+                    # token_ids.append(token_ids_arr)
+                    file.write(token_ids_arr.tobytes())
 
-            token_ids = np.concatenate(token_ids)
-            token_ids = token_ids.reshape(-1)
-            np.save(save_path, token_ids)
+            # token_ids = np.concatenate(token_ids)
+            # np.save(save_path, token_ids)
 
         print(f"The result of file {file_path} were saved in {save_path}")
 
@@ -610,16 +609,19 @@ class BPETokenizer(Tokenizer):
             decode_bytes += self.vocab[token]
         return decode_bytes.decode(encoding="utf-8", errors="ignore")
 
+
 def _process_chunk(
     tokenizer: BPETokenizer, 
     file_path: str, 
     boundary: Tuple[int, int]
 ) -> List[int]:
     start, end = boundary
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, "rb") as f:
         f.seek(start)
-        text = f.read(end - start)
-    return tokenizer.encode(text)
+        chunk = f.read(end - start).decode(encoding="utf-8", errors="ignore")
+        text = chunk.replace("\r\n", "\n")
+    token_ids = tokenizer.encode(text)
+    return np.array(token_ids, dtype=np.uint16)
 
 
 def encode_tiny():
@@ -633,8 +635,8 @@ def encode_tiny():
 
 
 def encode_owt():
-    file_path = Path(__file__).parent.parent / "data" / "owt_small.txt"
-    save_path = Path(__file__).parent.parent / "data" / "owt_small"
+    file_path = Path(__file__).parent.parent / "data" / "owt_train.txt"
+    save_path = Path(__file__).parent.parent / "data" / "owt_train.npy"
 
     params_path = Path(__file__).parent / "owt_params.bin"
 
@@ -643,5 +645,5 @@ def encode_owt():
 
 
 if __name__ == "__main__":
-    encode_tiny()
-    # encode_owt()
+    # encode_tiny()
+    encode_owt()
