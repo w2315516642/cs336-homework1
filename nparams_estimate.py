@@ -26,8 +26,9 @@ if __name__ == "__main__":
     # transformer block 的总参数量
     params_per_tb = rms + attn_qkvo + fnn
     tb = params_per_tb * num_layers
-    
-    out_layer = d_model * vocab_size
+
+    # 输出为一个 RMS 层 + 一个 Linear 层
+    out_layer = d_model + d_model * vocab_size
 
     total_params = int(embedding + rope + tb + out_layer)
 
