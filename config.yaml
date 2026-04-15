@@ -25,7 +25,7 @@ train_config:
   warmup_iters: 1000
   cosine_iters: 20000
   max_l2_norm: 1.0
-  checkpoint_interval: 100 # 注意：代码里 alias 是 checkpoint_interval
+  checkpoint_interval: 100 # 根据 alias 对应的 checkpoint_interval 来命名
   max_ckpt_to_keep: 3      # 最大保持的ckpt数量
   output_dir: "./output/"
   train_data: "./data/owt_train.npy"

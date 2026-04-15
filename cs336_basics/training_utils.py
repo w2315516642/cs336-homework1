@@ -6,6 +6,32 @@ from torch import nn
 from torch.nn import functional as F
 import numpy as np
 
+
+def top_p_filter(logits: torch.Tensor, top_p: float | None = None) -> torch.Tensor:
+    if not top_p:
+        return logits
+    
+    assert top_p >= 0 and top_p <= 1, f"Invaild top-p value: {top_p}"
+
+    # 先排序
+    sorted_logits, sorted_indices = torch.sort(logits, dim=-1, descending=True)
+    # 为了算概率要进行softmax
+    sorted_probs = softmax(sorted_logits, dim=-1)
+    cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+    # 将累计概率大于p的下标移除
+    sorted_indices_to_remove = cumulative_probs > top_p
+    # 保留使得累计概率大于p的那个下标
+    sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+    sorted_indices_to_remove[..., 0] = 0
+
+    indices_to_remove = sorted_indices_to_remove.scatter(
+        -1, sorted_indices, sorted_indices_to_remove
+    )
+    logits[indices_to_remove] = float("-inf")
+
+    return logits
+
+
 def softmax(x: torch.Tensor, dim: int=-1) -> torch.Tensor:
     in_dtype = x.dtype
     x.to(torch.float32)
@@ -117,12 +143,15 @@ def save_checkpoint(
 
 def load_checkpoint(
     file_path: str | Path,
-    model: torch.nn.Module,
-    optimizer: torch.optim.Optimizer,
+    model: torch.nn.Module | None = None,
+    optimizer: torch.optim.Optimizer | None = None,
+    device: torch.device = "cuda"
 ) -> int:
-    checkpoint = torch.load(file_path)
-    model.load_state_dict(checkpoint["model_state"])
-    optimizer.load_state_dict(checkpoint["optim_state"])
+    checkpoint = torch.load(file_path, device)
+    if model is not None:
+        model.load_state_dict(checkpoint["model_state"])
+    if optimizer is not None:
+        optimizer.load_state_dict(checkpoint["optim_state"])
     return checkpoint["iteration"]
 
 
